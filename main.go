@@ -84,28 +84,25 @@ func main() {
 
 	case "favorites":
 		if len(os.Args) != 2 {
-			log.Println("usage: qobuz-sync favorites <albums|tracks>")
+			log.Println("usage: qobuz-sync favorites <albums|tracks|albums+tracks>")
 
 			return
 		}
 
+		var getTracks, getAlbums bool
 		switch os.Args[1] {
 		case "albums":
-			res, err := c.FavoriteGetUserFavorites(ListTypeALBUM, 0)
-			if err != nil {
-				log.Println(err, "unable to get favorites list:", err)
-				os.Exit(1)
-			}
-
-			for _, album := range res.Albums.Items {
-				err = downloadAlbum(c, album.ID, baseDir)
-				if err != nil {
-					log.Println(warn, "unable to download album, skipping:", err)
-
-					continue
-				}
-			}
+			getAlbums = true
 		case "tracks":
+			getTracks = true
+		case "albums+tracks", "tracks+albums":
+			getAlbums = true
+			getTracks = true
+		default:
+			log.Println("usage: qobuz-sync favorites <albums|tracks|albums+tracks>")
+		}
+
+		if getTracks {
 			res, err := c.FavoriteGetUserFavorites(ListTypeTRACK, 0)
 			if err != nil {
 				log.Println(err, "unable to get favorites list:", err)
@@ -131,6 +128,23 @@ func main() {
 				err = downloadAlbumArt(track.Album.Image.Large, dir)
 				if err != nil {
 					log.Println(warn, "unable to download album art, skipping:", err)
+
+					continue
+				}
+			}
+		}
+
+		if getAlbums {
+			res, err := c.FavoriteGetUserFavorites(ListTypeALBUM, 0)
+			if err != nil {
+				log.Println(err, "unable to get favorites list:", err)
+				os.Exit(1)
+			}
+
+			for _, album := range res.Albums.Items {
+				err = downloadAlbum(c, album.ID, baseDir)
+				if err != nil {
+					log.Println(warn, "unable to download album, skipping:", err)
 
 					continue
 				}
