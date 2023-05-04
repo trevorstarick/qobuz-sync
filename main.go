@@ -18,7 +18,7 @@ func main() {
 	}
 
 	if username == "" || password == "" {
-		log.Println("error: QOBUZ_USERNAME and QOBUZ_PASSWORD envvars must be set")
+		log.Println(err, "QOBUZ_USERNAME and QOBUZ_PASSWORD envvars must be set")
 		os.Exit(1)
 	}
 
@@ -31,7 +31,7 @@ func main() {
 
 	c, err := NewClient(username, password)
 	if err != nil {
-		log.Println("error: unable to login")
+		log.Println(err, "unable to login")
 		os.Exit(1)
 	}
 
@@ -45,7 +45,7 @@ func main() {
 
 		err := downloadAlbum(c, os.Args[1], baseDir)
 		if err != nil {
-			log.Println("error: unable to download album:", err)
+			log.Println(err, "unable to download album:", err)
 			os.Exit(1)
 		}
 
@@ -58,7 +58,7 @@ func main() {
 
 		res, err := c.TrackGet(os.Args[1])
 		if err != nil {
-			log.Println("error: unable to download track:", err)
+			log.Println(err, "unable to download track:", err)
 			os.Exit(1)
 		}
 
@@ -69,16 +69,16 @@ func main() {
 		path, err := downloadTrack(c, strconv.Itoa(res.ID), dir)
 		if err != nil {
 			if errors.Is(err, ErrAlreadyExists) {
-				log.Println("info: track already exists:", path)
+				log.Println(info, "track already exists:", path)
 			} else {
-				log.Println("error: unable to download track:", err)
+				log.Println(err, "unable to download track:", err)
 				os.Exit(1)
 			}
 		}
 
 		err = downloadAlbumArt(res.Album.Image.Large, dir)
 		if err != nil {
-			log.Println("error: unable to download album art:", err)
+			log.Println(err, "unable to download album art:", err)
 			os.Exit(1)
 		}
 
@@ -93,14 +93,14 @@ func main() {
 		case "albums":
 			res, err := c.FavoriteGetUserFavorites(ListTypeALBUM, 0)
 			if err != nil {
-				log.Println("error: unable to get favorites list:", err)
+				log.Println(err, "unable to get favorites list:", err)
 				os.Exit(1)
 			}
 
 			for _, album := range res.Albums.Items {
 				err = downloadAlbum(c, album.ID, baseDir)
 				if err != nil {
-					log.Println("warn: unable to download album, skipping:", err)
+					log.Println(warn, "unable to download album, skipping:", err)
 
 					continue
 				}
@@ -108,7 +108,7 @@ func main() {
 		case "tracks":
 			res, err := c.FavoriteGetUserFavorites(ListTypeTRACK, 0)
 			if err != nil {
-				log.Println("error: unable to get favorites list:", err)
+				log.Println(err, "unable to get favorites list:", err)
 				os.Exit(1)
 			}
 
@@ -120,9 +120,9 @@ func main() {
 				path, err := downloadTrack(c, strconv.Itoa(track.ID), dir)
 				if err != nil {
 					if errors.Is(err, ErrAlreadyExists) {
-						log.Println("info: track already exists:", path)
+						log.Println(info, "track already exists:", path)
 					} else {
-						log.Println("warn: unable to download track, skipping:", err)
+						log.Println(warn, "unable to download track, skipping:", err)
 					}
 
 					continue
@@ -130,7 +130,7 @@ func main() {
 
 				err = downloadAlbumArt(track.Album.Image.Large, dir)
 				if err != nil {
-					log.Println("warn: unable to download album art, skipping:", err)
+					log.Println(warn, "unable to download album art, skipping:", err)
 
 					continue
 				}

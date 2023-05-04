@@ -16,6 +16,12 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	info = "\x1b[34minfo:\x1b[0m"
+	warn = "\x1b[33mwarn:\x1b[0m"
+	err  = "\x1b[31merr:\x1b[0m"
+)
+
 type tags struct {
 	Album       string
 	AlbumArtist string
@@ -111,7 +117,7 @@ func downloadTrackToFile(c *Client, trackID string, path string) error {
 	}
 
 	if url.MimeType != "audio/flac" {
-		log.Printf("warn: not FLAC got %v: %v\n", url.MimeType, path)
+		log.Printf(warn, "not FLAC got %v: %v\n", url.MimeType, path)
 		path = strings.ReplaceAll(path, ".flac", ".mp3")
 	}
 
@@ -201,7 +207,7 @@ func downloadTrack(c *Client, id string, dir string) (string, error) {
 		return "", errors.Wrap(err, "failed to set tags")
 	}
 
-	log.Println("info: downloaded track", path)
+	log.Println(info, "downloaded track", path)
 
 	return path, nil
 }
@@ -247,7 +253,7 @@ func downloadAlbum(c *Client, id string, dir string) error {
 		path := buildPath(dir, track.Title, track.TrackNumber, res.TracksCount, track.MediaNumber, res.MediaCount)
 		_, err = os.Stat(path)
 		if err == nil {
-			log.Println("info: track already exists, skipping:", path)
+			log.Println(info, "track already exists, skipping:", path)
 
 			continue
 		}
@@ -255,9 +261,9 @@ func downloadAlbum(c *Client, id string, dir string) error {
 		_, err := downloadTrack(c, strconv.Itoa(track.ID), dir)
 		if err != nil {
 			if errors.Is(err, ErrAlreadyExists) {
-				log.Println("info: track already exists, skipping:", path)
+				log.Println(info, "track already exists, skipping:", path)
 			} else {
-				log.Println("warn: failed to download track, skipping:", err)
+				log.Println(warn, "failed to download track, skipping:", err)
 			}
 
 			continue
@@ -266,10 +272,10 @@ func downloadAlbum(c *Client, id string, dir string) error {
 
 	err = downloadAlbumArt(res.Image.Large, dir)
 	if err != nil {
-		log.Println("warn: failed to download album art, skipping:", err)
+		log.Println(warn, "failed to download album art, skipping:", err)
 	}
 
-	log.Println("info: downloaded album", dir)
+	log.Println(info, "downloaded album", dir)
 
 	return nil
 }
