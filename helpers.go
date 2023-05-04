@@ -213,6 +213,14 @@ func downloadTrack(c *Client, id string, dir string) (string, error) {
 }
 
 func downloadAlbumArt(url string, dir string) error {
+	u := strings.ReplaceAll(url, "_600", "_org")
+	if u != url {
+		err := downloadAlbumArt(u, dir)
+		if err == nil {
+			return nil
+		}
+	}
+
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
 		return errors.Wrap(err, "failed to create request")
