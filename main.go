@@ -103,51 +103,71 @@ func main() {
 		}
 
 		if getTracks {
-			res, err := c.FavoriteGetUserFavorites(ListTypeTRACK, 0)
-			if err != nil {
-				log.Println(err, "unable to get favorites list:", err)
-				os.Exit(1)
-			}
-
-			for _, track := range res.Tracks.Items {
-				artist := sanitizeStringToPath(track.Album.Artist.Name)
-				albumName := sanitizeStringToPath(track.Album.Title)
-				dir := filepath.Join(baseDir, artist, albumName)
-
-				path, err := downloadTrack(c, strconv.Itoa(track.ID), dir)
+			offset := 0
+			for {
+				res, err := c.FavoriteGetUserFavorites(ListTypeTRACK, 0)
 				if err != nil {
-					if errors.Is(err, ErrAlreadyExists) {
-						log.Println(info, "track already exists:", path)
-					} else {
-						log.Println(warn, "unable to download track, skipping:", err)
+					log.Println(err, "unable to get favorites list:", err)
+					os.Exit(1)
+				}
+
+				for _, track := range res.Tracks.Items {
+					artist := sanitizeStringToPath(track.Album.Artist.Name)
+					albumName := sanitizeStringToPath(track.Album.Title)
+					dir := filepath.Join(baseDir, artist, albumName)
+
+					path, err := downloadTrack(c, strconv.Itoa(track.ID), dir)
+					if err != nil {
+						if errors.Is(err, ErrAlreadyExists) {
+							log.Println(info, "track already exists:", path)
+						} else {
+							log.Println(warn, "unable to download track, skipping:", err)
+						}
+
+						continue
 					}
 
-					continue
+					err = downloadAlbumArt(track.Album.Image.Large, dir)
+					if err != nil {
+						log.Println(warn, "unable to download album art, skipping:", err)
+
+						continue
+					}
 				}
 
-				err = downloadAlbumArt(track.Album.Image.Large, dir)
-				if err != nil {
-					log.Println(warn, "unable to download album art, skipping:", err)
-
-					continue
+				if res.Tracks.Offset+res.Tracks.Limit >= res.Tracks.Total {
+					break
 				}
+
+				offset += res.Tracks.Limit
 			}
+
 		}
 
 		if getAlbums {
-			res, err := c.FavoriteGetUserFavorites(ListTypeALBUM, 0)
-			if err != nil {
-				log.Println(err, "unable to get favorites list:", err)
-				os.Exit(1)
-			}
+			offset := 0
 
-			for _, album := range res.Albums.Items {
-				err = downloadAlbum(c, album.ID, baseDir)
+			for {
+				res, err := c.FavoriteGetUserFavorites(ListTypeALBUM, 0)
 				if err != nil {
-					log.Println(warn, "unable to download album, skipping:", err)
-
-					continue
+					log.Println(err, "unable to get favorites list:", err)
+					os.Exit(1)
 				}
+
+				for _, album := range res.Albums.Items {
+					err = downloadAlbum(c, album.ID, baseDir)
+					if err != nil {
+						log.Println(warn, "unable to download album, skipping:", err)
+
+						continue
+					}
+				}
+
+				if res.Albums.Offset+res.Albums.Limit >= res.Albums.Total {
+					break
+				}
+
+				offset += res.Albums.Limit
 			}
 		}
 	default:
