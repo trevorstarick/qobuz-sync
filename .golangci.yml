@@ -1,0 +1,44 @@
+run:
+  skip-dirs:
+    - responses
+
+output:
+  sort-results: true
+
+linters:
+  disable:
+    - cyclop
+    - dupl # (duplicate code)
+    - gocyclo
+    - containedctx # todo: jobs system needs redone
+    - exhaustruct # (structs must have all values assigned)
+    - exhaustivestruct
+    - funlen # (func length)
+    - gochecknoglobals # (no globals)
+    - gochecknoinits # (no init())
+    - gocognit
+    - godox
+    - gomnd # (no magic numbers)
+    - gosec # (security)
+    - lll # (long lines)
+    - nestif 
+    - paralleltest
+    - tagliatelle
+    - varnamelen
+    - wsl
+
+    # deprecated with replacement
+    - nosnakecase # (revive)
+    - maligned # (fieldalignment)
+    - scopelint # (exportloopref)
+    - golint # (revive)
+    - deadcode # (unused)
+    - varcheck # (unused)
+    
+    # deprecated without replacement
+    # - interfacer
+    - ifshort
+    
+    # generics
+    - structcheck
+  enable-all: true
