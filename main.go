@@ -1,208 +1,271 @@
 package main
 
 import (
-	"errors"
 	"log"
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"github.com/pkg/errors"
 )
 
-var baseDir = "downloads"
+func handleAlbum(c *Client, id string, baseDir string) error {
+	dir, err := downloadAlbum(c, id, baseDir)
+	if err != nil {
+		if errors.Is(err, ErrAlreadyExists) {
+			log.Println(infoMsg, "album already exists:", dir)
+		} else {
+			return errors.Wrap(err, "unable to download album")
+		}
+	}
 
-func main() {
-	username := os.Getenv("QOBUZ_USERNAME")
-	password := os.Getenv("QOBUZ_PASSWORD")
+	return nil
+}
+
+func handleTrack(c *Client, id string, baseDir string) error {
+	res, err := c.TrackGet(id)
+	if err != nil {
+		return errors.Wrap(err, "unable to download track")
+	}
+
+	artist := sanitizeStringToPath(res.Album.Artist.Name)
+	albumName := sanitizeStringToPath(res.Album.Title)
+	dir := filepath.Join(baseDir, artist, albumName)
+
+	path, err := downloadTrack(c, strconv.Itoa(res.ID), dir)
+	if err != nil {
+		if errors.Is(err, ErrAlreadyExists) {
+			log.Println(infoMsg, "track already exists:", path)
+		} else {
+			return errors.Wrap(err, "unable to download track")
+		}
+	}
+
+	err = downloadAlbumArt(res.Album.Image.Large, dir)
+	if err != nil {
+		if errors.Is(err, ErrAlreadyExists) {
+			log.Println(infoMsg, "album art already exists:", dir)
+		} else {
+			return errors.Wrap(err, "unable to download album art")
+		}
+	}
+
+	return nil
+}
+
+func handleFavoriteAlbums(c *Client, baseDir string) error {
+	offset := 0
+
+	for {
+		res, err := c.FavoriteGetUserFavorites(ListTypeALBUM, offset)
+		if err != nil {
+			return errors.Wrap(err, "unable to get favorites list")
+		}
+
+		for _, album := range res.Albums.Items {
+			dir, err := downloadAlbum(c, album.ID, baseDir)
+			if err != nil {
+				if errors.Is(err, ErrAlreadyExists) {
+					log.Println(infoMsg, "album already exists:", dir)
+				} else {
+					log.Println(warnMsg, "unable to download album, skipping:", err)
+				}
+
+				continue
+			}
+		}
+
+		if res.Albums.Offset+res.Albums.Limit >= res.Albums.Total {
+			break
+		}
+
+		offset += res.Albums.Limit
+	}
+
+	return nil
+}
+
+func handleFavoriteTracks(c *Client, baseDir string) error {
+	offset := 0
+
+	for {
+		res, err := c.FavoriteGetUserFavorites(ListTypeTRACK, offset)
+		if err != nil {
+			return errors.Wrap(err, "unable to get favorites list")
+		}
+
+		for _, track := range res.Tracks.Items {
+			artist := sanitizeStringToPath(track.Album.Artist.Name)
+			albumName := sanitizeStringToPath(track.Album.Title)
+			dir := filepath.Join(baseDir, artist, albumName)
+
+			path, err := downloadTrack(c, strconv.Itoa(track.ID), dir)
+			if err != nil {
+				if errors.Is(err, ErrAlreadyExists) {
+					log.Println(infoMsg, "track already exists:", path)
+				} else {
+					log.Println(warnMsg, "unable to download track, skipping:", err)
+				}
+
+				continue
+			}
+
+			err = downloadAlbumArt(track.Album.Image.Large, dir)
+			if err != nil {
+				if errors.Is(err, ErrAlreadyExists) {
+					log.Println(infoMsg, "album art already exists:", dir)
+				} else {
+					log.Println(warnMsg, "unable to download album art, skipping:", err)
+				}
+
+				continue
+			}
+		}
+
+		if res.Tracks.Offset+res.Tracks.Limit >= res.Tracks.Total {
+			break
+		}
+
+		offset += res.Tracks.Limit
+	}
+
+	return nil
+}
+
+func handleFavorites(c *Client, mode string, baseDir string) error {
+	switch mode {
+	case "albums":
+		err := handleFavoriteAlbums(c, baseDir)
+		if err != nil {
+			return err
+		}
+	case "tracks":
+		err := handleFavoriteTracks(c, baseDir)
+		if err != nil {
+			return err
+		}
+	case "albums+tracks", "tracks+albums":
+		err := handleFavoriteTracks(c, baseDir)
+		if err != nil {
+			return err
+		}
+
+		err = handleFavoriteAlbums(c, baseDir)
+		if err != nil {
+			return err
+		}
+	default:
+		log.Println("usage: qobuz-sync favorites <albums|tracks|albums+tracks>")
+
+		return ErrInvalidArgs
+	}
+
+	return nil
+}
+
+func run() error {
+	var (
+		baseDir  = "downloads"
+		username = os.Getenv("QOBUZ_USERNAME")
+		password = os.Getenv("QOBUZ_PASSWORD")
+	)
+
 	if os.Getenv("QOBUZ_BASEDIR") != "" {
 		baseDir = os.Getenv("QOBUZ_BASEDIR")
 	}
 
 	if username == "" || password == "" {
-		log.Println(err, "QOBUZ_USERNAME and QOBUZ_PASSWORD envvars must be set")
-		os.Exit(1)
+		log.Println(errMsg, "QOBUZ_USERNAME and QOBUZ_PASSWORD envvars must be set")
+
+		return errors.Wrap(ErrAuthFailed, "missing credentials")
 	}
 
-	err := os.MkdirAll(baseDir, 0o755)
+	err := os.MkdirAll(baseDir, dirPerm)
 	if err != nil {
-		log.Println(err, "unable to create base dir")
+		return errors.Wrap(err, "unable to create base dir")
 	}
 
 	trackTracker, err = NewTracker(filepath.Join(baseDir, "tracks.txt"))
 	if err != nil {
-		log.Println(err, "unable to create track tracker")
+		return errors.Wrap(err, "unable to create track tracker")
 	}
+	defer trackTracker.Close()
 
 	albumTracker, err = NewTracker(filepath.Join(baseDir, "albums.txt"))
 	if err != nil {
-		log.Println(err, "unable to create album tracker")
+		return errors.Wrap(err, "unable to create album tracker")
 	}
+	defer albumTracker.Close()
 
-	os.Args = os.Args[1:]
+	args := os.Args[1:]
 
-	if len(os.Args) == 0 {
+	if len(args) == 0 {
 		log.Println("usage: qobuz-sync <album|track|favorites>")
-		os.Exit(1)
+
+		return errors.Wrap(ErrInvalidArgs, "no command specified")
 	}
 
 	c, err := NewClient(username, password)
 	if err != nil {
-		log.Println(err, "unable to login")
-		os.Exit(1)
+		log.Println(errMsg, "unable to login")
+
+		return ErrAuthFailed
 	}
 
-	switch os.Args[0] {
+	switch args[0] {
 	case "album":
-		if len(os.Args) != 2 {
+		if len(args) != 2 { //nolint:gomnd
 			log.Println("usage: qobuz-sync album <id>")
 
-			return
+			return errors.Wrap(ErrInvalidArgs, "invalid number of arguments")
 		}
 
-		dir, err := downloadAlbum(c, os.Args[1], baseDir)
+		err = handleAlbum(c, args[1], baseDir)
 		if err != nil {
-			if errors.Is(err, ErrAlreadyExists) {
-				log.Println(info, "album already exists:", dir)
-			} else {
-				log.Println(err, "unable to download album:", err)
-				os.Exit(1)
-			}
+			return err
 		}
-
 	case "track":
-		if len(os.Args) != 2 {
+		if len(args) != 2 { //nolint:gomnd
 			log.Println("usage: qobuz-sync track <id>")
 
-			return
+			return errors.Wrap(ErrInvalidArgs, "invalid number of arguments")
 		}
 
-		res, err := c.TrackGet(os.Args[1])
+		err = handleTrack(c, args[1], baseDir)
 		if err != nil {
-			log.Println(err, "unable to download track:", err)
-			os.Exit(1)
+			return err
 		}
-
-		artist := sanitizeStringToPath(res.Album.Artist.Name)
-		albumName := sanitizeStringToPath(res.Album.Title)
-		dir := filepath.Join(baseDir, artist, albumName)
-
-		path, err := downloadTrack(c, strconv.Itoa(res.ID), dir)
-		if err != nil {
-			if errors.Is(err, ErrAlreadyExists) {
-				log.Println(info, "track already exists:", path)
-			} else {
-				log.Println(err, "unable to download track:", err)
-				os.Exit(1)
-			}
-		}
-
-		err = downloadAlbumArt(res.Album.Image.Large, dir)
-		if err != nil {
-			if errors.Is(err, ErrAlreadyExists) {
-				log.Println(info, "album art already exists:", dir)
-			} else {
-				log.Println(err, "unable to download album art:", err)
-				os.Exit(1)
-			}
-		}
-
 	case "favorites":
-		if len(os.Args) != 2 {
-			log.Println("usage: qobuz-sync favorites <albums|tracks|albums+tracks>")
+		if len(args) != 2 { //nolint:gomnd
+			log.Println("usage: qobuz-sync favorites <album|track>")
 
-			return
+			return errors.Wrap(ErrInvalidArgs, "invalid number of arguments")
 		}
 
-		var getTracks, getAlbums bool
-		switch os.Args[1] {
-		case "albums":
-			getAlbums = true
-		case "tracks":
-			getTracks = true
-		case "albums+tracks", "tracks+albums":
-			getAlbums = true
-			getTracks = true
-		default:
-			log.Println("usage: qobuz-sync favorites <albums|tracks|albums+tracks>")
-		}
-
-		if getTracks {
-			offset := 0
-			for {
-				res, err := c.FavoriteGetUserFavorites(ListTypeTRACK, offset)
-				if err != nil {
-					log.Println(err, "unable to get favorites list:", err)
-					os.Exit(1)
-				}
-
-				for _, track := range res.Tracks.Items {
-					artist := sanitizeStringToPath(track.Album.Artist.Name)
-					albumName := sanitizeStringToPath(track.Album.Title)
-					dir := filepath.Join(baseDir, artist, albumName)
-
-					path, err := downloadTrack(c, strconv.Itoa(track.ID), dir)
-					if err != nil {
-						if errors.Is(err, ErrAlreadyExists) {
-							log.Println(info, "track already exists:", path)
-						} else {
-							log.Println(warn, "unable to download track, skipping:", err)
-						}
-
-						continue
-					}
-
-					err = downloadAlbumArt(track.Album.Image.Large, dir)
-					if err != nil {
-						if errors.Is(err, ErrAlreadyExists) {
-							log.Println(info, "album art already exists:", dir)
-						} else {
-							log.Println(warn, "unable to download album art, skipping:", err)
-						}
-
-						continue
-					}
-				}
-
-				if res.Tracks.Offset+res.Tracks.Limit >= res.Tracks.Total {
-					break
-				}
-
-				offset += res.Tracks.Limit
-			}
-		}
-
-		if getAlbums {
-			offset := 0
-
-			for {
-				res, err := c.FavoriteGetUserFavorites(ListTypeALBUM, offset)
-				if err != nil {
-					log.Println(err, "unable to get favorites list:", err)
-					os.Exit(1)
-				}
-
-				for _, album := range res.Albums.Items {
-					dir, err := downloadAlbum(c, album.ID, baseDir)
-					if err != nil {
-						if errors.Is(err, ErrAlreadyExists) {
-							log.Println(info, "album already exists:", dir)
-						} else {
-							log.Println(warn, "unable to download album, skipping:", err)
-						}
-
-						continue
-					}
-				}
-
-				if res.Albums.Offset+res.Albums.Limit >= res.Albums.Total {
-					break
-				}
-
-				offset += res.Albums.Limit
-			}
+		err = handleFavorites(c, args[1], baseDir)
+		if err != nil {
+			return err
 		}
 	default:
 		log.Println("usage: qobuz-sync <album|track|favorites>")
 
-		return
+		return errors.Wrap(ErrInvalidArgs, "invalid number of arguments")
+	}
+
+	return nil
+}
+
+func main() {
+	err := run()
+	if err != nil {
+		log.Println(errMsg, err)
+
+		if errors.Is(err, ErrInvalidArgs) {
+			os.Exit(1)
+		} else if errors.Is(err, ErrAuthFailed) {
+			os.Exit(2)
+		} else {
+			os.Exit(3)
+		}
 	}
 }

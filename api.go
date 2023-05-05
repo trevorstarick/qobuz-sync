@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -74,16 +74,14 @@ func (c *Client) TrackGetFileURL(trackID string, format trackFormat) (*trackGetF
 		return nil, errors.Wrap(err, "failed to create request")
 	}
 
-	ts := fmt.Sprintf("%d", time.Now().Unix())
-
+	timestamp := fmt.Sprintf("%d", time.Now().Unix())
 	sig := "trackgetFileUrlformat_id%vintentstreamtrack_id%v%v%v"
-	sig = fmt.Sprintf(sig, format, trackID, ts, c.Secrets[0])
-
-	hash := md5.Sum([]byte(sig))
+	sig = fmt.Sprintf(sig, format, trackID, timestamp, c.Secrets[0])
+	hash := md5.Sum([]byte(sig)) //nolint:gosec
 	hashedSig := hex.EncodeToString(hash[:])
 
 	q := req.URL.Query()
-	q.Set("request_ts", ts)
+	q.Set("request_ts", timestamp)
 	q.Set("request_sig", hashedSig)
 	q.Set("track_id", trackID)
 	q.Set("format_id", fmt.Sprintf("%d", format))
@@ -148,16 +146,16 @@ func (c *Client) FavoriteGetUserFavorites(t listType, offset int) (*favoriteGetU
 		return nil, errors.Wrap(err, "failed to create request")
 	}
 
-	ts := fmt.Sprintf("%d", time.Now().Unix())
-	sig := "favoritegetUserFavorites" + ts
-	hash := md5.Sum([]byte(sig))
+	timestamp := fmt.Sprintf("%d", time.Now().Unix())
+	sig := "favoritegetUserFavorites" + timestamp
+	hash := md5.Sum([]byte(sig)) //nolint:gosec
 	hashedSig := hex.EncodeToString(hash[:])
 
 	q := req.URL.Query()
 	q.Set("limit", "100")
 	q.Set("offset", strconv.Itoa(offset))
 	q.Set("type", string(t)) // albums, tracks, artists, articles
-	q.Set("request_ts", ts)
+	q.Set("request_ts", timestamp)
 	q.Set("request_sig", hashedSig)
 
 	req.URL.RawQuery = q.Encode()
@@ -171,7 +169,10 @@ func (c *Client) FavoriteGetUserFavorites(t listType, offset int) (*favoriteGetU
 
 	if res.StatusCode != http.StatusOK {
 		buf, err := io.ReadAll(res.Body)
-		_ = err
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to read body")
+		}
+
 		fmt.Fprintf(os.Stderr, "req: %v\n", req.URL.String())
 		fmt.Fprintf(os.Stderr, "err: %v\n", string(buf))
 

@@ -17,7 +17,7 @@ const (
 	userAgent     = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:83.0) Gecko/20100101 Firefox/83.0"
 	baseApp       = "https://play.qobuz.com"
 	baseAPI       = "https://www.qobuz.com/api.json/0.2/"
-	userAuthToken = "X-User-Auth-Token"
+	userAuthToken = "X-User-Auth-Token" //nolint:gosec
 )
 
 var (
@@ -41,8 +41,7 @@ func (c *Client) getBundleURL() (string, error) {
 		return "", errors.Wrap(err, "new request")
 	}
 
-	client := &http.Client{}
-	res, err := client.Do(req)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", errors.Wrap(err, "do request")
 	}
@@ -73,8 +72,7 @@ func (c *Client) getAppID() (string, error) {
 		return "", errors.Wrap(err, "new request")
 	}
 
-	client := &http.Client{}
-	res, err := client.Do(req)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", errors.Wrap(err, "do request")
 	}
@@ -97,6 +95,7 @@ func (c *Client) getAppID() (string, error) {
 func (c *Client) testSecret(secret string) bool {
 	secrets := c.Secrets
 	c.Secrets = []string{secret}
+
 	defer func() {
 		c.Secrets = secrets
 	}()
@@ -117,8 +116,7 @@ func (c *Client) getSecrets() ([]string, error) {
 		return nil, errors.Wrap(err, "new request")
 	}
 
-	client := &http.Client{}
-	res, err := client.Do(req)
+	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, errors.Wrap(err, "do request")
 	}
@@ -144,7 +142,9 @@ func (c *Client) getSecrets() ([]string, error) {
 	seeds := make(map[string]t)
 	for _, match := range matches {
 		seeds[match[2]] = t{
-			seed: match[1],
+			seed:   match[1],
+			info:   "",
+			extras: "",
 		}
 	}
 
@@ -154,14 +154,14 @@ func (c *Client) getSecrets() ([]string, error) {
 	}
 
 	for _, info := range infos {
-		tz := strings.ToLower(info[1])
-		if tz == "algiers" {
-			tz = "algier"
+		timezone := strings.ToLower(info[1])
+		if timezone == "algiers" {
+			timezone = "algier"
 		}
 
-		if _, ok := seeds[tz]; ok {
-			seed := seeds[tz].seed
-			seeds[tz] = t{
+		if _, ok := seeds[timezone]; ok {
+			seed := seeds[timezone].seed
+			seeds[timezone] = t{
 				seed:   seed,
 				info:   info[2],
 				extras: info[3],
@@ -174,6 +174,7 @@ func (c *Client) getSecrets() ([]string, error) {
 	for _, seed := range seeds {
 		rightSide := seed.seed + seed.info + seed.extras
 		secret := rightSide[:len(rightSide)-44]
+
 		base64Secret, err := base64.StdEncoding.DecodeString(secret)
 		if err != nil {
 			return nil, errors.Wrap(err, "decode secret")
@@ -192,7 +193,10 @@ func NewClient(email, password string) (*Client, error) {
 	headers.Set("User-Agent", userAgent)
 
 	client := &Client{
-		c: &http.Client{},
+		c:       http.DefaultClient,
+		AppID:   "",
+		Header:  headers,
+		Secrets: []string{},
 	}
 
 	appID, err := client.getAppID()
@@ -205,9 +209,10 @@ func NewClient(email, password string) (*Client, error) {
 	}
 
 	client = &Client{
-		c:      &http.Client{},
-		AppID:  appID,
-		Header: headers,
+		c:       http.DefaultClient,
+		AppID:   appID,
+		Header:  headers,
+		Secrets: []string{},
 	}
 
 	if err := client.auth(email, password); err != nil {

@@ -9,23 +9,8 @@ linters:
   disable:
     - cyclop
     - dupl # (duplicate code)
-    - gocyclo
-    - containedctx # todo: jobs system needs redone
-    - exhaustruct # (structs must have all values assigned)
-    - exhaustivestruct
     - funlen # (func length)
-    - gochecknoglobals # (no globals)
-    - gochecknoinits # (no init())
-    - gocognit
-    - godox
-    - gomnd # (no magic numbers)
-    - gosec # (security)
-    - lll # (long lines)
-    - nestif 
-    - paralleltest
-    - tagliatelle
     - varnamelen
-    - wsl
 
     # deprecated with replacement
     - nosnakecase # (revive)
@@ -34,9 +19,10 @@ linters:
     - golint # (revive)
     - deadcode # (unused)
     - varcheck # (unused)
+    - exhaustivestruct # (exhaustruct)
     
     # deprecated without replacement
-    # - interfacer
+    - interfacer
     - ifshort
     
     # generics

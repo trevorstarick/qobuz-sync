@@ -17,14 +17,14 @@ type Track struct {
 }
 
 func NewTracker(path string) (*Track, error) {
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0o644)
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, filePerm)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to open file")
 	}
 
 	t := &Track{
 		cache: make(map[string]string),
-		f:     f,
+		f:     file,
 		Path:  path,
 	}
 
@@ -42,7 +42,7 @@ func NewTracker(path string) (*Track, error) {
 
 		index := strings.Index(line, delim)
 		if index == -1 {
-			log.Println(warn, "invalid line in tracker file:", line)
+			log.Println(warnMsg, "invalid line in tracker file:", line)
 
 			continue
 		}
@@ -52,7 +52,7 @@ func NewTracker(path string) (*Track, error) {
 
 		_, err := os.Stat(path)
 		if err != nil {
-			log.Println(warn, "unable to stat file:", path)
+			log.Println(warnMsg, "unable to stat file:", path)
 
 			continue
 		}
@@ -69,6 +69,7 @@ func (t *Track) Set(key string, value string) error {
 	}
 
 	t.cache[key] = value
+
 	_, err := t.f.WriteString(fmt.Sprintf("%s: %s\n", key, value))
 	if err != nil {
 		return errors.Wrap(err, "unable to write to file")
@@ -83,4 +84,13 @@ func (t *Track) Get(key string) (string, error) {
 	}
 
 	return "", errors.New("key not found")
+}
+
+func (t *Track) Close() error {
+	err := t.f.Close()
+	if err != nil {
+		return errors.Wrap(err, "unable to close file")
+	}
+
+	return nil
 }
