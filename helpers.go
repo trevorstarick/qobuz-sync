@@ -17,6 +17,11 @@ import (
 )
 
 var (
+	albumTracker *Track
+	trackTracker *Track
+)
+
+var (
 	info = "\x1b[34minfo:\x1b[0m"
 	warn = "\x1b[33mwarn:\x1b[0m"
 	err  = "\x1b[31merr:\x1b[0m"
@@ -148,6 +153,11 @@ func downloadTrackToFile(c *Client, trackID string, path string) error {
 }
 
 func downloadTrack(c *Client, id string, dir string) (string, error) {
+	path, err := trackTracker.Get(id)
+	if err == nil {
+		return path, ErrAlreadyExists
+	}
+
 	res, err := c.TrackGet(id)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get track")
@@ -171,7 +181,7 @@ func downloadTrack(c *Client, id string, dir string) (string, error) {
 		return "", ErrUnavailable
 	}
 
-	path := buildPath(dir, res.Title, res.TrackNumber, res.Album.TracksCount, res.MediaNumber, res.Album.MediaCount)
+	path = buildPath(dir, res.Title, res.TrackNumber, res.Album.TracksCount, res.MediaNumber, res.Album.MediaCount)
 	err = os.MkdirAll(filepath.Dir(path), 0o755)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create dir")
@@ -179,6 +189,11 @@ func downloadTrack(c *Client, id string, dir string) (string, error) {
 
 	_, err = os.Stat(path)
 	if err == nil {
+		err = trackTracker.Set(id, path)
+		if err != nil {
+			return "", errors.Wrap(err, "failed to set track as downloaded")
+		}
+
 		return path, ErrAlreadyExists
 	}
 
@@ -208,6 +223,11 @@ func downloadTrack(c *Client, id string, dir string) (string, error) {
 	}
 
 	log.Println(info, "downloaded track", path)
+
+	err = trackTracker.Set(id, path)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to set track as downloaded")
+	}
 
 	return path, nil
 }
@@ -248,6 +268,11 @@ func downloadAlbumArt(url string, dir string) error {
 }
 
 func downloadAlbum(c *Client, id string, dir string) error {
+	_, err := albumTracker.Get(id)
+	if err == nil {
+		return ErrAlreadyExists
+	}
+
 	res, err := c.AlbumGet(id)
 	if err != nil {
 		return errors.Wrap(err, "album get")
@@ -284,6 +309,11 @@ func downloadAlbum(c *Client, id string, dir string) error {
 	}
 
 	log.Println(info, "downloaded album", dir)
+
+	err = albumTracker.Set(id, dir)
+	if err != nil {
+		return errors.Wrap(err, "failed to set album as downloaded")
+	}
 
 	return nil
 }

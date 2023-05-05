@@ -22,6 +22,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	err := os.MkdirAll(baseDir, 0o755)
+	if err != nil {
+		log.Println(err, "unable to create base dir")
+	}
+
+	trackTracker, err = NewTracker(filepath.Join(baseDir, "tracks.txt"))
+	if err != nil {
+		log.Println(err, "unable to create track tracker")
+	}
+
+	albumTracker, err = NewTracker(filepath.Join(baseDir, "albums.txt"))
+	if err != nil {
+		log.Println(err, "unable to create album tracker")
+	}
+
 	os.Args = os.Args[1:]
 
 	if len(os.Args) == 0 {
@@ -141,7 +156,6 @@ func main() {
 
 				offset += res.Tracks.Limit
 			}
-
 		}
 
 		if getAlbums {
