@@ -58,10 +58,14 @@ func main() {
 			return
 		}
 
-		err := downloadAlbum(c, os.Args[1], baseDir)
+		dir, err := downloadAlbum(c, os.Args[1], baseDir)
 		if err != nil {
-			log.Println(err, "unable to download album:", err)
-			os.Exit(1)
+			if errors.Is(err, ErrAlreadyExists) {
+				log.Println(info, "album already exists:", dir)
+			} else {
+				log.Println(err, "unable to download album:", err)
+				os.Exit(1)
+			}
 		}
 
 	case "track":
@@ -93,8 +97,12 @@ func main() {
 
 		err = downloadAlbumArt(res.Album.Image.Large, dir)
 		if err != nil {
-			log.Println(err, "unable to download album art:", err)
-			os.Exit(1)
+			if errors.Is(err, ErrAlreadyExists) {
+				log.Println(info, "album art already exists:", dir)
+			} else {
+				log.Println(err, "unable to download album art:", err)
+				os.Exit(1)
+			}
 		}
 
 	case "favorites":
@@ -144,7 +152,11 @@ func main() {
 
 					err = downloadAlbumArt(track.Album.Image.Large, dir)
 					if err != nil {
-						log.Println(warn, "unable to download album art, skipping:", err)
+						if errors.Is(err, ErrAlreadyExists) {
+							log.Println(info, "album art already exists:", dir)
+						} else {
+							log.Println(warn, "unable to download album art, skipping:", err)
+						}
 
 						continue
 					}
@@ -169,9 +181,13 @@ func main() {
 				}
 
 				for _, album := range res.Albums.Items {
-					err = downloadAlbum(c, album.ID, baseDir)
+					dir, err := downloadAlbum(c, album.ID, baseDir)
 					if err != nil {
-						log.Println(warn, "unable to download album, skipping:", err)
+						if errors.Is(err, ErrAlreadyExists) {
+							log.Println(info, "album already exists:", dir)
+						} else {
+							log.Println(warn, "unable to download album, skipping:", err)
+						}
 
 						continue
 					}

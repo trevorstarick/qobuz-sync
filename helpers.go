@@ -155,7 +155,7 @@ func downloadTrackToFile(c *Client, trackID string, path string) error {
 func downloadTrack(c *Client, id string, dir string) (string, error) {
 	path, err := trackTracker.Get(id)
 	if err == nil {
-		return path, ErrAlreadyExists
+		return path, errors.Wrap(ErrAlreadyExists, "cached")
 	}
 
 	res, err := c.TrackGet(id)
@@ -233,6 +233,11 @@ func downloadTrack(c *Client, id string, dir string) (string, error) {
 }
 
 func downloadAlbumArt(url string, dir string) error {
+	_, err := os.Stat(filepath.Join(dir, "album.jpg"))
+	if err == nil {
+		return ErrAlreadyExists
+	}
+
 	u := strings.ReplaceAll(url, "_600", "_org")
 	if u != url {
 		err := downloadAlbumArt(u, dir)
@@ -267,20 +272,20 @@ func downloadAlbumArt(url string, dir string) error {
 	return nil
 }
 
-func downloadAlbum(c *Client, id string, dir string) error {
-	_, err := albumTracker.Get(id)
+func downloadAlbum(c *Client, id string, dir string) (string, error) {
+	d, err := albumTracker.Get(id)
 	if err == nil {
-		return ErrAlreadyExists
+		return d, errors.Wrap(ErrAlreadyExists, "cached")
 	}
 
 	res, err := c.AlbumGet(id)
-	if err != nil {
-		return errors.Wrap(err, "album get")
-	}
-
 	artist := sanitizeStringToPath(res.Artist.Name)
 	albumName := sanitizeStringToPath(res.Title)
 	dir = filepath.Join(dir, artist, albumName)
+
+	if err != nil {
+		return dir, errors.Wrap(err, "album get")
+	}
 
 	for _, track := range res.Tracks.Items {
 		path := buildPath(dir, track.Title, track.TrackNumber, res.TracksCount, track.MediaNumber, res.MediaCount)
@@ -305,15 +310,19 @@ func downloadAlbum(c *Client, id string, dir string) error {
 
 	err = downloadAlbumArt(res.Image.Large, dir)
 	if err != nil {
-		log.Println(warn, "failed to download album art, skipping:", err)
+		if errors.Is(err, ErrAlreadyExists) {
+			log.Println(info, "album art already exists, skipping:", dir)
+		} else {
+			log.Println(warn, "failed to download album art, skipping:", err)
+		}
 	}
 
 	log.Println(info, "downloaded album", dir)
 
 	err = albumTracker.Set(id, dir)
 	if err != nil {
-		return errors.Wrap(err, "failed to set album as downloaded")
+		return dir, errors.Wrap(err, "failed to set album as downloaded")
 	}
 
-	return nil
+	return dir, nil
 }
