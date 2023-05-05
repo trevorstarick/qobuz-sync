@@ -105,7 +105,7 @@ func main() {
 		if getTracks {
 			offset := 0
 			for {
-				res, err := c.FavoriteGetUserFavorites(ListTypeTRACK, 0)
+				res, err := c.FavoriteGetUserFavorites(ListTypeTRACK, offset)
 				if err != nil {
 					log.Println(err, "unable to get favorites list:", err)
 					os.Exit(1)
@@ -148,7 +148,7 @@ func main() {
 			offset := 0
 
 			for {
-				res, err := c.FavoriteGetUserFavorites(ListTypeALBUM, 0)
+				res, err := c.FavoriteGetUserFavorites(ListTypeALBUM, offset)
 				if err != nil {
 					log.Println(err, "unable to get favorites list:", err)
 					os.Exit(1)
