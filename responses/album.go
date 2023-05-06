@@ -98,7 +98,7 @@ func (album *Album) DownloadAlbumArt(dir string) error {
 	url := strings.ReplaceAll(album.Image.Large, "_600", "_org")
 	log.Debug().Str("url", url).Str("dir", dir).Msg("downloading album art")
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, http.NoBody)
 	if err != nil {
 		return errors.Wrap(err, "failed to create request")
 	}

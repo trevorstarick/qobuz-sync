@@ -17,7 +17,7 @@ type Querier[T any] struct {
 func (q Querier[T]) Req(path string, query *url.Values) (*T, error) {
 	log.Debug().Str("path", path).Str("query", query.Encode()).Msg("requesting")
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseAPI+path, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseAPI+path, http.NoBody)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create request")
 	}

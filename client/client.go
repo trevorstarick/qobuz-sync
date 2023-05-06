@@ -149,8 +149,8 @@ func (client *Client) getBundle() (string, error) {
 	return client.bundle, nil
 }
 
-func (client *Client) getBundleURL() (string, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseApp+"/login", nil)
+func (*Client) getBundleURL() (string, error) {
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseApp+"/login", http.NoBody)
 	if err != nil {
 		return "", errors.Wrap(err, "new request")
 	}

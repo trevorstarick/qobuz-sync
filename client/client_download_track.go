@@ -32,7 +32,7 @@ func (client *Client) download(trackID string, path string) error {
 		return errors.Wrap(common.ErrAlreadyExists, "cached")
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url.URL, nil)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url.URL, http.NoBody)
 	if err != nil {
 		return errors.Wrap(err, "failed to create request")
 	}
