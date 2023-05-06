@@ -69,7 +69,7 @@ var postRun = func(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func envOrDefault(key string, defaultValue string) string {
+func envOrDefault(key, defaultValue string) string {
 	if value, ok := os.LookupEnv(key); ok {
 		return value
 	}

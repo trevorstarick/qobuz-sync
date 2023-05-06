@@ -13,7 +13,7 @@ import (
 	"github.com/trevorstarick/qobuz-sync/common"
 )
 
-func (client *Client) download(trackID string, path string) error {
+func (client *Client) download(trackID, path string) error {
 	url, err := client.TrackGetFileURL(trackID, QualityMAX)
 	if err != nil {
 		return errors.Wrap(err, "failed to get track file url")
@@ -59,7 +59,7 @@ func (client *Client) download(trackID string, path string) error {
 	return nil
 }
 
-func (client *Client) downloadAndSetMetadata(trackID string, path string, metadata common.Metadata) error {
+func (client *Client) downloadAndSetMetadata(trackID, path string, metadata common.Metadata) error {
 	partialPath := path + ".part"
 
 	err := client.download(trackID, partialPath)

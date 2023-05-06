@@ -66,7 +66,7 @@ func NewTracker(path string) (*Tracker, error) {
 	return tracker, nil
 }
 
-func (tracker *Tracker) Set(key string, value string) error {
+func (tracker *Tracker) Set(key, value string) error {
 	if _, ok := tracker.cache[key]; ok {
 		return nil
 	}
