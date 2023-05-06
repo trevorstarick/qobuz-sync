@@ -117,14 +117,5 @@ func (client *Client) downloadTrack(trackID string) error {
 }
 
 func (client *Client) DownloadTrack(trackID string) error {
-	err := client.downloadTrack(trackID)
-	if err != nil {
-		if errors.Is(err, common.ErrAlreadyExists) {
-			log.Info().Msgf("track already exists: %v", trackID)
-		} else {
-			return errors.Wrap(err, "failed to download track")
-		}
-	}
-
-	return nil
+	return client.downloadTrack(trackID)
 }

@@ -65,10 +65,10 @@ func (client *Client) DownloadAlbum(albumID string) error {
 	album, err := client.downloadAlbum(albumID)
 	if err != nil {
 		if errors.Is(err, common.ErrAlreadyExists) {
-			log.Info().Msgf("album already exists: %v", albumID)
-		} else {
-			return errors.Wrap(err, "failed to download album")
+			return err
 		}
+
+		return errors.Wrap(err, "failed to download album")
 	}
 
 	albumDir := filepath.Join(client.baseDir, album.Path())
