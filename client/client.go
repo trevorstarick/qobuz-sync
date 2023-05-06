@@ -127,12 +127,13 @@ func (client *Client) getBundle() (string, error) {
 		return "", errors.Wrap(err, "get bundle url")
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, bundleURL, nil)
-	if err != nil {
-		return "", errors.Wrap(err, "new request")
+	// do some basic verification that the url is valid
+	if !(strings.HasPrefix(bundleURL, "https://play.qobuz.com/resources/") &&
+		strings.HasSuffix(bundleURL, "/bundle.js")) {
+		return "", errors.New("invalid bundle url")
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := http.Get(bundleURL) //nolint:noctx,gosec // We do as much validation as we can above
 	if err != nil {
 		return "", errors.Wrap(err, "do request")
 	}
@@ -150,12 +151,7 @@ func (client *Client) getBundle() (string, error) {
 }
 
 func (*Client) getBundleURL() (string, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseApp+"/login", http.NoBody)
-	if err != nil {
-		return "", errors.Wrap(err, "new request")
-	}
-
-	res, err := http.DefaultClient.Do(req)
+	res, err := http.Get(baseApp + "/login") //nolint:noctx
 	if err != nil {
 		return "", errors.Wrap(err, "do request")
 	}
