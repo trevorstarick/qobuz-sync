@@ -1,7 +1,6 @@
 package responses
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"os"
@@ -98,12 +97,12 @@ func (album *Album) DownloadAlbumArt(dir string) error {
 	url := strings.ReplaceAll(album.Image.Large, "_600", "_org")
 	log.Debug().Str("url", url).Str("dir", dir).Msg("downloading album art")
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, http.NoBody)
-	if err != nil {
-		return errors.Wrap(err, "failed to create request")
+	// do some basic verification that the url is valid
+	if !strings.HasPrefix(url, "https://static.qobuz.com/images/covers/") {
+		return errors.New("invalid album art url")
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := http.Get(url) //nolint:noctx,gosec // we validate the url above
 	if err != nil {
 		return errors.Wrap(err, "failed to get album art")
 	}
