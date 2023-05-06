@@ -28,7 +28,9 @@ func (client *Client) FavoriteAlbums() error {
 			return errors.Wrap(err, "unable to get favorites list")
 		}
 
-		for _, album := range res.Albums.Items {
+		for i := range res.Albums.Items {
+			album := &res.Albums.Items[i]
+
 			err = client.DownloadAlbum(album.ID)
 			if err != nil {
 				if errors.Is(err, common.ErrAlreadyExists) {
