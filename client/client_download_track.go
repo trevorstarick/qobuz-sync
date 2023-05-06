@@ -32,9 +32,9 @@ func (client *Client) download(trackID, path string) error {
 		return errors.Wrap(common.ErrAlreadyExists, "cached")
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url.URL, http.NoBody)
-	if err != nil {
-		return errors.Wrap(err, "failed to create request")
+	// do some basic verification that the url is valid
+	if !strings.HasPrefix(url.URL, "https://streaming-qobuz-std.akamaized.net/file?") {
+		return errors.New("was given an invalid streaming url from qobuz")
 	}
 
 	res, err := http.DefaultClient.Do(req)
