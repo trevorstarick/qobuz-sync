@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
+	"github.com/trevorstarick/qobuz-sync/common"
 )
 
 type Tracker struct {
@@ -17,7 +18,7 @@ type Tracker struct {
 }
 
 func NewTracker(path string) (*Tracker, error) {
-	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, filePerm)
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, common.FilePerm)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to open file")
 	}

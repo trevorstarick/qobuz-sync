@@ -7,7 +7,7 @@ RUN apk update && \
 WORKDIR /app
 COPY  . .
 RUN go mod download
-RUN GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o qobuz-sync . && chmod o+x qobuz-sync
+RUN GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o qobuz-sync ./cmd && chmod o+x qobuz-sync
 
 # --- RUNTIME ---
 FROM scratch

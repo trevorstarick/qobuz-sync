@@ -1,4 +1,5 @@
-package UserLogin
+//nolint:tagliatelle,misspell
+package userlogin
 
 type Response struct {
 	User          User   `json:"user"`

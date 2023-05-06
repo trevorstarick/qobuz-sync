@@ -1,4 +1,5 @@
-package GetFileUrl
+//nolint:tagliatelle
+package trackgetfileurl
 
 type Response struct {
 	TrackID      int            `json:"track_id"`

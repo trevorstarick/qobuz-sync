@@ -1,4 +1,4 @@
-package main
+package client
 
 import (
 	"context"
@@ -6,11 +6,30 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
 	userLogin "github.com/trevorstarick/qobuz-sync/responses/user/login"
+)
+
+type trackFormat int
+
+const (
+	QualityMP3   trackFormat = 5  // 320kbps
+	QualityFLAC  trackFormat = 6  // 16-bit 44.1kHz+
+	QualityHIRES trackFormat = 7  // 24-bit 44.1kHz+
+	QualityMAX   trackFormat = 27 // 24-bit 96kHz+
+
+)
+
+type listType string
+
+const (
+	ListTypeALBUM  listType = "albums"
+	ListTypeTRACK  listType = "tracks"
+	listTypeARTIST listType = "artists"
 )
 
 const (
@@ -27,8 +46,15 @@ var (
 	infoRegexp   = regexp.MustCompile(`name:"\w+/([A-Z][a-z]+)",info:"(?P<info>[\w=]+)",extras:"(?P<extras>[\w=]+)"`)
 )
 
+type Key struct{}
+
 type Client struct {
-	c *http.Client `json:"-"`
+	c *http.Client
+
+	baseDir string
+
+	albumTracker *Tracker
+	trackTracker *Tracker
 
 	bundle string
 
@@ -37,12 +63,66 @@ type Client struct {
 	Header  http.Header
 }
 
-func (c *Client) getBundle() (string, error) {
-	if c.bundle != "" {
-		return c.bundle, nil
+func NewClient(email, password, baseDir string) (*Client, error) {
+	headers := http.Header{}
+	headers.Set("User-Agent", userAgent)
+
+	client := &Client{
+		c:            http.DefaultClient,
+		bundle:       "",
+		baseDir:      baseDir,
+		trackTracker: &Tracker{}, //nolint:exhaustruct
+		albumTracker: &Tracker{}, //nolint:exhaustruct
+		AppID:        "",
+		Header:       headers,
+		Secrets:      []string{},
 	}
 
-	bundleURL, err := c.getBundleURL()
+	appID, err := client.getAppID()
+	if err != nil {
+		return nil, errors.Wrap(err, "get app id")
+	}
+
+	if appID == "" {
+		return nil, errors.New("no app id found")
+	}
+
+	client.AppID = appID
+
+	if err := client.Login(email, password); err != nil {
+		return nil, errors.Wrap(err, "auth")
+	}
+
+	secrets, err := client.getSecrets()
+	if err != nil {
+		return nil, errors.Wrap(err, "get secrets")
+	}
+
+	if secrets == nil {
+		return nil, errors.New("no secrets found")
+	}
+
+	client.Secrets = secrets
+
+	client.trackTracker, err = NewTracker(filepath.Join(baseDir, "tracks.txt"))
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to create track tracker")
+	}
+
+	client.albumTracker, err = NewTracker(filepath.Join(baseDir, "albums.txt"))
+	if err != nil {
+		return nil, errors.Wrap(err, "unable to create album tracker")
+	}
+
+	return client, nil
+}
+
+func (client *Client) getBundle() (string, error) {
+	if client.bundle != "" {
+		return client.bundle, nil
+	}
+
+	bundleURL, err := client.getBundleURL()
 	if err != nil {
 		return "", errors.Wrap(err, "get bundle url")
 	}
@@ -64,12 +144,12 @@ func (c *Client) getBundle() (string, error) {
 		return "", errors.Wrap(err, "read body")
 	}
 
-	c.bundle = string(buf)
+	client.bundle = string(buf)
 
-	return c.bundle, nil
+	return client.bundle, nil
 }
 
-func (c *Client) getBundleURL() (string, error) {
+func (client *Client) getBundleURL() (string, error) {
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseApp+"/login", nil)
 	if err != nil {
 		return "", errors.Wrap(err, "new request")
@@ -95,8 +175,8 @@ func (c *Client) getBundleURL() (string, error) {
 	return baseApp + matches[0][1], nil
 }
 
-func (c *Client) getAppID() (string, error) {
-	bundle, err := c.getBundle()
+func (client *Client) getAppID() (string, error) {
+	bundle, err := client.getBundle()
 	if err != nil {
 		return "", errors.Wrap(err, "get bundle")
 	}
@@ -109,22 +189,22 @@ func (c *Client) getAppID() (string, error) {
 	return matches[0][1], nil
 }
 
-func (c *Client) testSecret(secret string) bool {
-	secrets := c.Secrets
-	c.Secrets = []string{secret}
+func (client *Client) testSecret(secret string) bool {
+	secrets := client.Secrets
+	client.Secrets = []string{secret}
 
 	defer func() {
-		c.Secrets = secrets
+		client.Secrets = secrets
 	}()
 
-	_, err := c.TrackGetFileURL("5966783", QualityMP3)
+	_, err := client.TrackGetFileURL("5966783", QualityMP3)
 
 	return err == nil
 }
 
 //nolint:cyclop,funlen // todo: fix in future
-func (c *Client) getSecrets() ([]string, error) {
-	bundle, err := c.getBundle()
+func (client *Client) getSecrets() ([]string, error) {
+	bundle, err := client.getBundle()
 	if err != nil {
 		return nil, errors.Wrap(err, "get bundle")
 	}
@@ -181,7 +261,7 @@ func (c *Client) getSecrets() ([]string, error) {
 			return nil, errors.Wrap(err, "decode secret")
 		}
 
-		if c.testSecret(string(base64Secret)) {
+		if client.testSecret(string(base64Secret)) {
 			secrets = append(secrets, string(base64Secret))
 		}
 	}
@@ -189,52 +269,11 @@ func (c *Client) getSecrets() ([]string, error) {
 	return secrets, nil
 }
 
-func NewClient(email, password string) (*Client, error) {
-	headers := http.Header{}
-	headers.Set("User-Agent", userAgent)
-
-	client := &Client{
-		c:       http.DefaultClient,
-		bundle:  "",
-		AppID:   "",
-		Header:  headers,
-		Secrets: []string{},
-	}
-
-	appID, err := client.getAppID()
-	if err != nil {
-		return nil, errors.Wrap(err, "get app id")
-	}
-
-	if appID == "" {
-		return nil, errors.New("no app id found")
-	}
-
-	client.AppID = appID
-
-	if err := client.auth(email, password); err != nil {
-		return nil, errors.Wrap(err, "auth")
-	}
-
-	secrets, err := client.getSecrets()
-	if err != nil {
-		return nil, errors.Wrap(err, "get secrets")
-	}
-
-	if secrets == nil {
-		return nil, errors.New("no secrets found")
-	}
-
-	client.Secrets = secrets
-
-	return client, nil
-}
-
-func (c *Client) auth(email, password string) error {
-	login, err := (Querier[userLogin.Response]{c}).Req("user/login", &url.Values{
+func (client *Client) Login(email, password string) error {
+	login, err := (Querier[userLogin.Response]{client}).Req("user/login", &url.Values{
 		"email":    {email},
 		"password": {password},
-		"app_id":   {c.AppID},
+		"app_id":   {client.AppID},
 	})
 	if err != nil {
 		return errors.Wrap(err, "user login")
@@ -244,7 +283,19 @@ func (c *Client) auth(email, password string) error {
 		return errors.New("no user auth token found")
 	}
 
-	c.Header.Set(userAuthToken, login.UserAuthToken)
+	client.Header.Set(userAuthToken, login.UserAuthToken)
+
+	return nil
+}
+
+func (client *Client) Close() error {
+	if err := client.trackTracker.Close(); err != nil {
+		return errors.Wrap(err, "unable to close track tracker")
+	}
+
+	if err := client.albumTracker.Close(); err != nil {
+		return errors.Wrap(err, "unable to close album tracker")
+	}
 
 	return nil
 }
