@@ -23,6 +23,8 @@ func NewTracker(path string) (*Tracker, error) {
 		return nil, errors.Wrap(err, "unable to open file")
 	}
 
+	// defer file.Close() // handled by Tracker.Close()
+
 	tracker := &Tracker{
 		cache: make(map[string]string),
 		file:  file,

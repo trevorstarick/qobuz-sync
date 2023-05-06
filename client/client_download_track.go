@@ -49,6 +49,8 @@ func (client *Client) download(trackID string, path string) error {
 		return errors.Wrap(err, "failed to create file")
 	}
 
+	defer f.Close()
+
 	_, err = io.Copy(f, res.Body)
 	if err != nil {
 		return errors.Wrap(err, "failed to copy response body")

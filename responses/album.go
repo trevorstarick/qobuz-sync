@@ -115,6 +115,8 @@ func (album *Album) DownloadAlbumArt(dir string) error {
 		return errors.Wrap(err, "failed to create file")
 	}
 
+	defer ff.Close()
+
 	_, err = io.Copy(ff, res.Body)
 	if err != nil {
 		return errors.Wrap(err, "failed to copy response body")
