@@ -138,7 +138,11 @@ func (client *Client) getBundle() (string, error) {
 		return "", errors.Wrap(err, "do request")
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		if closeErr := res.Body.Close(); closeErr != nil {
+			err = errors.Wrap(err, "failed to close m3u file")
+		}
+	}()
 
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {
@@ -156,7 +160,11 @@ func (*Client) getBundleURL() (string, error) {
 		return "", errors.Wrap(err, "do request")
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		if closeErr := res.Body.Close(); closeErr != nil {
+			err = errors.Wrap(err, "failed to close m3u file")
+		}
+	}()
 
 	buf, err := io.ReadAll(res.Body)
 	if err != nil {

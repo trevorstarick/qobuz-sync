@@ -29,7 +29,15 @@ func (client *Client) DownloadPlaylist(playlistID string) error {
 		return errors.Wrap(err, "failed to create m3u file")
 	}
 
-	defer m3uFile.Close()
+	defer func() {
+		if syncErr := m3uFile.Sync(); syncErr != nil {
+			err = errors.Wrap(err, "failed to sync m3u file")
+		}
+
+		if closeErr := m3uFile.Close(); closeErr != nil {
+			err = errors.Wrap(err, "failed to close m3u file")
+		}
+	}()
 
 	_, _ = m3uFile.WriteString("#EXTM3U\n")
 	_, _ = m3uFile.WriteString("#EXTENC: UTF-8\n")

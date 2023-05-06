@@ -37,21 +37,33 @@ func (client *Client) download(trackID, path string) error {
 		return errors.New("was given an invalid streaming url from qobuz")
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := http.Get(url.URL) //nolint:noctx
 	if err != nil {
 		return errors.Wrap(err, "failed to do request")
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		if closeErr := res.Body.Close(); closeErr != nil {
+			err = errors.Wrap(err, "failed to close m3u file")
+		}
+	}()
 
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, common.FilePerm)
+	audioFile, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, common.FilePerm)
 	if err != nil {
 		return errors.Wrap(err, "failed to create file")
 	}
 
-	defer f.Close()
+	defer func() {
+		if syncErr := audioFile.Sync(); syncErr != nil {
+			err = errors.Wrap(err, "failed to sync file")
+		}
 
-	_, err = io.Copy(f, res.Body)
+		if closeErr := audioFile.Close(); closeErr != nil {
+			err = errors.Wrap(err, "failed to close file")
+		}
+	}()
+
+	_, err = io.Copy(audioFile, res.Body)
 	if err != nil {
 		return errors.Wrap(err, "failed to copy response body")
 	}

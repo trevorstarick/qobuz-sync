@@ -42,7 +42,11 @@ func (q Querier[T]) Req(path string, query *url.Values) (*T, error) {
 		return nil, errors.Wrap(err, "failed to do request")
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		if closeErr := res.Body.Close(); closeErr != nil {
+			err = errors.Wrap(err, "failed to close m3u file")
+		}
+	}()
 
 	if res.StatusCode != http.StatusOK {
 		return nil, errors.Errorf("invalid status code: %d", res.StatusCode)
