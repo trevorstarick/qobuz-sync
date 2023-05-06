@@ -13,7 +13,7 @@ import (
 )
 
 //nolint:cyclop // TODO: refactor
-func (client *Client) download(trackID, path string) error {
+func (client *Client) downloadFile(trackID, path string) error {
 	url, err := client.TrackGetFileURL(trackID, QualityMAX)
 	if err != nil {
 		return errors.Wrap(err, "failed to get track file url")
@@ -67,10 +67,10 @@ func (client *Client) download(trackID, path string) error {
 	return nil
 }
 
-func (client *Client) downloadAndSetMetadata(trackID, path string, metadata common.Metadata) error {
+func (client *Client) downloadFileAndSetMetadata(trackID, path string, metadata common.Metadata) error {
 	partialPath := path + ".part"
 
-	err := client.download(trackID, partialPath)
+	err := client.downloadFile(trackID, partialPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to download track")
 	}
@@ -111,7 +111,7 @@ func (client *Client) downloadTrack(trackID string) error {
 		return common.ErrAlreadyExists
 	}
 
-	err = client.downloadAndSetMetadata(trackID, trackPath, track.Metadata())
+	err = client.downloadFileAndSetMetadata(trackID, trackPath, track.Metadata())
 	if err != nil {
 		return errors.Wrap(err, "failed to download and set metadata")
 	}
