@@ -35,8 +35,6 @@ var Debug = &cobra.Command{
 			if err != nil {
 				return errors.Wrap(err, "unable to get track")
 			}
-
-			spew.Dump(res)
 		default:
 			return errors.Errorf("unknown command %q", args[0])
 		}
