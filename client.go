@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -17,7 +17,7 @@ const (
 	userAgent     = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:83.0) Gecko/20100101 Firefox/83.0"
 	baseApp       = "https://play.qobuz.com"
 	baseAPI       = "https://www.qobuz.com/api.json/0.2/"
-	userAuthToken = "X-User-Auth-Token" //nolint:gosec
+	userAuthToken = "X-User-Auth-Token" //nolint:gosec // This is not a secret
 )
 
 var (
@@ -30,9 +30,43 @@ var (
 type Client struct {
 	c *http.Client `json:"-"`
 
+	bundle string
+
 	AppID   string
 	Secrets []string
 	Header  http.Header
+}
+
+func (c *Client) getBundle() (string, error) {
+	if c.bundle != "" {
+		return c.bundle, nil
+	}
+
+	bundleURL, err := c.getBundleURL()
+	if err != nil {
+		return "", errors.Wrap(err, "get bundle url")
+	}
+
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, bundleURL, nil)
+	if err != nil {
+		return "", errors.Wrap(err, "new request")
+	}
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", errors.Wrap(err, "do request")
+	}
+
+	defer res.Body.Close()
+
+	buf, err := io.ReadAll(res.Body)
+	if err != nil {
+		return "", errors.Wrap(err, "read body")
+	}
+
+	c.bundle = string(buf)
+
+	return c.bundle, nil
 }
 
 func (c *Client) getBundleURL() (string, error) {
@@ -62,29 +96,12 @@ func (c *Client) getBundleURL() (string, error) {
 }
 
 func (c *Client) getAppID() (string, error) {
-	bundleURL, err := c.getBundleURL()
+	bundle, err := c.getBundle()
 	if err != nil {
-		return "", errors.Wrap(err, "get bundle url")
+		return "", errors.Wrap(err, "get bundle")
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, bundleURL, nil)
-	if err != nil {
-		return "", errors.Wrap(err, "new request")
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", errors.Wrap(err, "do request")
-	}
-
-	defer res.Body.Close()
-
-	buf, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", errors.Wrap(err, "read body")
-	}
-
-	matches := appIDRegexp.FindAllStringSubmatch(string(buf), -1)
+	matches := appIDRegexp.FindAllStringSubmatch(bundle, -1)
 	if len(matches) == 0 {
 		return "", errors.New("no matches found")
 	}
@@ -105,30 +122,14 @@ func (c *Client) testSecret(secret string) bool {
 	return err == nil
 }
 
+//nolint:cyclop,funlen // todo: fix in future
 func (c *Client) getSecrets() ([]string, error) {
-	bundleURL, err := c.getBundleURL()
+	bundle, err := c.getBundle()
 	if err != nil {
-		return nil, errors.Wrap(err, "get bundle url")
+		return nil, errors.Wrap(err, "get bundle")
 	}
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, bundleURL, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "new request")
-	}
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "do request")
-	}
-
-	defer res.Body.Close()
-
-	buf, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, errors.Wrap(err, "read body")
-	}
-
-	matches := tzRegexp.FindAllStringSubmatch(string(buf), -1)
+	matches := tzRegexp.FindAllStringSubmatch(bundle, -1)
 	if len(matches) == 0 {
 		return nil, errors.New("no matches found")
 	}
@@ -148,7 +149,7 @@ func (c *Client) getSecrets() ([]string, error) {
 		}
 	}
 
-	infos := infoRegexp.FindAllStringSubmatch(string(buf), -1)
+	infos := infoRegexp.FindAllStringSubmatch(bundle, -1)
 	if len(infos) == 0 {
 		return nil, errors.New("no matches found")
 	}
@@ -194,6 +195,7 @@ func NewClient(email, password string) (*Client, error) {
 
 	client := &Client{
 		c:       http.DefaultClient,
+		bundle:  "",
 		AppID:   "",
 		Header:  headers,
 		Secrets: []string{},
@@ -208,12 +210,7 @@ func NewClient(email, password string) (*Client, error) {
 		return nil, errors.New("no app id found")
 	}
 
-	client = &Client{
-		c:       http.DefaultClient,
-		AppID:   appID,
-		Header:  headers,
-		Secrets: []string{},
-	}
+	client.AppID = appID
 
 	if err := client.auth(email, password); err != nil {
 		return nil, errors.Wrap(err, "auth")
@@ -233,50 +230,14 @@ func NewClient(email, password string) (*Client, error) {
 	return client, nil
 }
 
-func (c *Client) do(req *http.Request) (*http.Response, error) {
-	for k, v := range c.Header {
-		req.Header.Set(k, v[0])
-	}
-
-	q := req.URL.Query()
-	q.Set("app_id", c.AppID)
-	req.URL.RawQuery = q.Encode()
-
-	res, err := c.c.Do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to do request")
-	}
-
-	return res, nil
-}
-
 func (c *Client) auth(email, password string) error {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseAPI+"user/login", nil)
+	login, err := (Querier[userLogin.Response]{c}).Req("user/login", &url.Values{
+		"email":    {email},
+		"password": {password},
+		"app_id":   {c.AppID},
+	})
 	if err != nil {
-		return errors.Wrap(err, "failed to create request")
-	}
-
-	query := req.URL.Query()
-	query.Set("email", email)
-	query.Set("password", password)
-	query.Set("app_id", c.AppID)
-	req.URL.RawQuery = query.Encode()
-
-	res, err := c.do(req)
-	if err != nil {
-		return errors.Wrap(err, "failed to do request")
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return errors.Errorf("invalid status code: %d", res.StatusCode)
-	}
-
-	var login userLogin.Response
-
-	if err := json.NewDecoder(res.Body).Decode(&login); err != nil {
-		return errors.Wrap(err, "failed to decode response")
+		return errors.Wrap(err, "user login")
 	}
 
 	if login.UserAuthToken == "" {

@@ -2,29 +2,29 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
-type Track struct {
+type Tracker struct {
 	cache map[string]string
-	f     *os.File
+	file  *os.File
 
 	Path string `json:"path"`
 }
 
-func NewTracker(path string) (*Track, error) {
+func NewTracker(path string) (*Tracker, error) {
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, filePerm)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to open file")
 	}
 
-	t := &Track{
+	tracker := &Tracker{
 		cache: make(map[string]string),
-		f:     file,
+		file:  file,
 		Path:  path,
 	}
 
@@ -42,35 +42,35 @@ func NewTracker(path string) (*Track, error) {
 
 		index := strings.Index(line, delim)
 		if index == -1 {
-			log.Println(warnMsg, "invalid line in tracker file:", line)
+			log.Warn().Msgf("invalid line in tracker file: %v", line)
 
 			continue
 		}
 
-		id := line[:index]
+		trackOrAlbumID := line[:index]
 		path := line[index+len(delim):]
 
 		_, err := os.Stat(path)
 		if err != nil {
-			log.Println(warnMsg, "unable to stat file:", path)
+			log.Warn().Msgf("unable to stat file: %v", path)
 
 			continue
 		}
 
-		t.cache[id] = path
+		tracker.cache[trackOrAlbumID] = path
 	}
 
-	return t, nil
+	return tracker, nil
 }
 
-func (t *Track) Set(key string, value string) error {
-	if _, ok := t.cache[key]; ok {
+func (tracker *Tracker) Set(key string, value string) error {
+	if _, ok := tracker.cache[key]; ok {
 		return nil
 	}
 
-	t.cache[key] = value
+	tracker.cache[key] = value
 
-	_, err := t.f.WriteString(fmt.Sprintf("%s: %s\n", key, value))
+	_, err := tracker.file.WriteString(fmt.Sprintf("%s: %s\n", key, value))
 	if err != nil {
 		return errors.Wrap(err, "unable to write to file")
 	}
@@ -78,16 +78,16 @@ func (t *Track) Set(key string, value string) error {
 	return nil
 }
 
-func (t *Track) Get(key string) (string, error) {
-	if v, ok := t.cache[key]; ok {
+func (tracker *Tracker) Get(key string) (string, error) {
+	if v, ok := tracker.cache[key]; ok {
 		return v, nil
 	}
 
 	return "", errors.New("key not found")
 }
 
-func (t *Track) Close() error {
-	err := t.f.Close()
+func (tracker *Tracker) Close() error {
+	err := tracker.file.Close()
 	if err != nil {
 		return errors.Wrap(err, "unable to close file")
 	}

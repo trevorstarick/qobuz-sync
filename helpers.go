@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -14,22 +13,19 @@ import (
 
 	"github.com/frolovo22/tag"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
 )
 
 //nolint:gochecknoglobals
 var (
-	albumTracker *Track
-	trackTracker *Track
-
 	dirPerm  = os.FileMode(0o755) //nolint:gomnd
 	filePerm = os.FileMode(0o644) //nolint:gomnd
 
-	infoMsg = "\x1b[34minfo:\x1b[0m"
-	warnMsg = "\x1b[33mwarn:\x1b[0m"
-	errMsg  = "\x1b[31merr:\x1b[0m"
+	albumTracker *Tracker
+	trackTracker *Tracker
 )
 
-type tags struct {
+type MetadataTags struct {
 	Album       string
 	AlbumArtist string
 	Artist      string
@@ -75,32 +71,32 @@ func buildPath(dir string, title string, track int, trackTotal int, disc int, di
 	return filepath.Join(dir, fmt.Sprintf("%v%v - %v%v", discNumber, trackNumber, title, format))
 }
 
-func setTags(path string, t tags) error {
-	tags, err := tag.ReadFile(path)
+func setTags(path string, tags MetadataTags) error {
+	fileTags, err := tag.ReadFile(path)
 	if err != nil {
 		return errors.Wrap(err, "failed to read part file for tags")
 	}
 
 	for _, err := range []error{
-		tags.SetAlbum(t.Album),
-		tags.SetAlbumArtist(t.AlbumArtist),
-		tags.SetArtist(t.Artist),
+		fileTags.SetAlbum(tags.Album),
+		fileTags.SetAlbumArtist(tags.AlbumArtist),
+		fileTags.SetArtist(tags.Artist),
 
-		tags.SetComment(t.Comment),
-		tags.SetGenre(t.Genre),
-		tags.SetDate(t.Date),
-		tags.SetComposer(t.Composer),
+		fileTags.SetComment(tags.Comment),
+		fileTags.SetGenre(tags.Genre),
+		fileTags.SetDate(tags.Date),
+		fileTags.SetComposer(tags.Composer),
 
-		tags.SetTitle(t.Title),
-		tags.SetTrackNumber(t.Track, t.TrackTotal),
-		tags.SetDiscNumber(t.Disc, t.DiscTotal),
+		fileTags.SetTitle(tags.Title),
+		fileTags.SetTrackNumber(tags.Track, tags.TrackTotal),
+		fileTags.SetDiscNumber(tags.Disc, tags.DiscTotal),
 	} {
 		if err != nil {
 			return errors.Wrap(err, "failed to set tag")
 		}
 	}
 
-	err = tags.SaveFile(strings.ReplaceAll(path, ".part", ""))
+	err = fileTags.SaveFile(strings.ReplaceAll(path, ".part", ""))
 	if err != nil {
 		return errors.Wrap(err, "failed to save tags")
 	}
@@ -124,7 +120,7 @@ func downloadTrackToFile(c *Client, trackID string, path string) error {
 	}
 
 	if url.MimeType != "audio/flac" {
-		log.Printf(warnMsg, "not FLAC got %v: %v\n", url.MimeType, path)
+		log.Warn().Msgf("not FLAC got %v: %v", url.MimeType, path)
 		path = strings.ReplaceAll(path, ".flac", ".mp3")
 	}
 
@@ -153,13 +149,14 @@ func downloadTrackToFile(c *Client, trackID string, path string) error {
 	return nil
 }
 
-func downloadTrack(c *Client, id string, dir string) (string, error) {
-	path, err := trackTracker.Get(id)
+//nolint:cyclop,funlen // todo: fix in future
+func downloadTrack(client *Client, trackID string, dir string) (string, error) {
+	path, err := trackTracker.Get(trackID)
 	if err == nil {
 		return path, errors.Wrap(ErrAlreadyExists, "cached")
 	}
 
-	res, err := c.TrackGet(id)
+	res, err := client.TrackGet(trackID)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get track")
 	}
@@ -173,15 +170,6 @@ func downloadTrack(c *Client, id string, dir string) (string, error) {
 		return "", errors.Wrap(err, "failed to create dir")
 	}
 
-	url, err := c.TrackGetFileURL(id, QualityMAX)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get track file url")
-	}
-
-	if url.FormatID == 0 {
-		return "", ErrUnavailable
-	}
-
 	path = buildPath(dir, res.Title, res.TrackNumber, res.Album.TracksCount, res.MediaNumber, res.Album.MediaCount)
 
 	err = os.MkdirAll(filepath.Dir(path), dirPerm)
@@ -191,7 +179,7 @@ func downloadTrack(c *Client, id string, dir string) (string, error) {
 
 	_, err = os.Stat(path)
 	if err == nil {
-		err = trackTracker.Set(id, path)
+		err = trackTracker.Set(trackID, path)
 		if err != nil {
 			return "", errors.Wrap(err, "failed to set track as downloaded")
 		}
@@ -199,14 +187,14 @@ func downloadTrack(c *Client, id string, dir string) (string, error) {
 		return path, ErrAlreadyExists
 	}
 
-	p := path + ".part"
+	partialPath := path + ".part"
 
-	err = downloadTrackToFile(c, strconv.Itoa(res.ID), p)
+	err = downloadTrackToFile(client, strconv.Itoa(res.ID), partialPath)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to download track")
 	}
 
-	err = setTags(p, tags{
+	err = setTags(partialPath, MetadataTags{
 		Album:       res.Album.Title,
 		AlbumArtist: res.Album.Artist.Name,
 		Artist:      res.Performer.Name,
@@ -224,9 +212,9 @@ func downloadTrack(c *Client, id string, dir string) (string, error) {
 		return "", errors.Wrap(err, "failed to set tags")
 	}
 
-	log.Println(infoMsg, "downloaded track", path)
+	log.Info().Msgf("downloaded track: %v", path)
 
-	err = trackTracker.Set(id, path)
+	err = trackTracker.Set(trackID, path)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to set track as downloaded")
 	}
@@ -240,13 +228,14 @@ func downloadAlbumArt(url string, dir string) error {
 		return ErrAlreadyExists
 	}
 
-	u := strings.ReplaceAll(url, "_600", "_org")
-	if u != url {
-		err := downloadAlbumArt(u, dir)
+	if strings.Contains(url, "_600") {
+		err := downloadAlbumArt(strings.ReplaceAll(url, "_600", "_org"), dir)
 		if err == nil {
 			return nil
 		}
 	}
+
+	log.Debug().Str("url", url).Str("dir", dir).Msg("downloading album art")
 
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, url, nil)
 	if err != nil {
@@ -273,13 +262,13 @@ func downloadAlbumArt(url string, dir string) error {
 	return nil
 }
 
-func downloadAlbum(c *Client, id string, dir string) (string, error) {
-	d, err := albumTracker.Get(id)
+func downloadAlbum(client *Client, albumID string, dir string) (string, error) {
+	d, err := albumTracker.Get(albumID)
 	if err == nil {
 		return d, errors.Wrap(ErrAlreadyExists, "cached")
 	}
 
-	res, err := c.AlbumGet(id)
+	res, err := client.AlbumGet(albumID)
 	artist := sanitizeStringToPath(res.Artist.Name)
 	albumName := sanitizeStringToPath(res.Title)
 	dir = filepath.Join(dir, artist, albumName)
@@ -293,17 +282,17 @@ func downloadAlbum(c *Client, id string, dir string) (string, error) {
 
 		_, err = os.Stat(path)
 		if err == nil {
-			log.Println(infoMsg, "track already exists, skipping:", path)
+			log.Info().Msgf("track already exists, skipping: %v", path)
 
 			continue
 		}
 
-		_, err := downloadTrack(c, strconv.Itoa(track.ID), dir)
+		_, err := downloadTrack(client, strconv.Itoa(track.ID), dir)
 		if err != nil {
 			if errors.Is(err, ErrAlreadyExists) {
-				log.Println(infoMsg, "track already exists, skipping:", path)
+				log.Info().Msgf("track already exists, skipping: %v", path)
 			} else {
-				log.Println(warnMsg, "failed to download track, skipping:", err)
+				log.Warn().Msgf("failed to download track, skipping: %v", err)
 			}
 
 			continue
@@ -313,18 +302,38 @@ func downloadAlbum(c *Client, id string, dir string) (string, error) {
 	err = downloadAlbumArt(res.Image.Large, dir)
 	if err != nil {
 		if errors.Is(err, ErrAlreadyExists) {
-			log.Println(infoMsg, "album art already exists, skipping:", dir)
+			log.Info().Msgf("album art already exists, skipping: %v", dir)
 		} else {
-			log.Println(warnMsg, "failed to download album art, skipping:", err)
+			log.Warn().Msgf("failed to download album art, skipping: %v", err)
 		}
 	}
 
-	log.Println(infoMsg, "downloaded album", dir)
+	log.Info().Msgf("downloaded album: %v", dir)
 
-	err = albumTracker.Set(id, dir)
+	err = albumTracker.Set(albumID, dir)
 	if err != nil {
 		return dir, errors.Wrap(err, "failed to set album as downloaded")
 	}
 
 	return dir, nil
+}
+
+func getHandlerFromContext(ctx context.Context) (*Handler, error) {
+	//nolint:exhaustruct
+	switch t := ctx.Value(Handler{}).(type) {
+	case *Handler:
+		return t, nil
+	case nil:
+		return nil, errors.New("handler is nil")
+	default:
+		return nil, errors.New("handler is not a *Handler")
+	}
+}
+
+func envOrDefault(key string, defaultValue string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+
+	return defaultValue
 }

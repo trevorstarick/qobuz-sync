@@ -1,18 +1,13 @@
 package main
 
 import (
-	"context"
-	"crypto/md5" //nolint:gosec
+	"crypto/md5" //nolint:gosec // MD5 is used for request signatures, not security
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
-	"os"
+	"net/url"
 	"strconv"
 	"time"
 
-	"github.com/pkg/errors"
 	albumGet "github.com/trevorstarick/qobuz-sync/responses/album/get"
 	favoriteGetUserFavorites "github.com/trevorstarick/qobuz-sync/responses/favorite/getUserFavorites"
 	trackGet "github.com/trevorstarick/qobuz-sync/responses/track/get"
@@ -39,182 +34,50 @@ const (
 )
 
 func (c *Client) TrackSearch(query string) (*trackSearch.TrackSearch, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseAPI+"track/search", nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create request")
-	}
-
-	q := req.URL.Query()
-	q.Set("query", query)
-	req.URL.RawQuery = q.Encode()
-
-	res, err := c.do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to do request")
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("invalid status code: %d", res.StatusCode)
-	}
-
-	var response trackSearch.TrackSearch
-
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return nil, errors.Wrap(err, "failed to decode response")
-	}
-
-	return &response, nil
+	return (Querier[trackSearch.TrackSearch]{c}).Req("track/search", &url.Values{
+		"query": []string{query},
+	})
 }
 
 func (c *Client) TrackGetFileURL(trackID string, format trackFormat) (*trackGetFileUrl.Response, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseAPI+"track/getFileUrl", nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create request")
-	}
-
 	timestamp := fmt.Sprintf("%d", time.Now().Unix())
 	sig := "trackgetFileUrlformat_id%vintentstreamtrack_id%v%v%v"
 	sig = fmt.Sprintf(sig, format, trackID, timestamp, c.Secrets[0])
-	hash := md5.Sum([]byte(sig)) //nolint:gosec
+	hash := md5.Sum([]byte(sig)) //nolint:gosec // MD5 is used for request signatures, not security
 	hashedSig := hex.EncodeToString(hash[:])
 
-	q := req.URL.Query()
-	q.Set("request_ts", timestamp)
-	q.Set("request_sig", hashedSig)
-	q.Set("track_id", trackID)
-	q.Set("format_id", fmt.Sprintf("%d", format))
-	q.Set("intent", "stream")
-
-	req.URL.RawQuery = q.Encode()
-
-	res, err := c.do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to do request")
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("invalid status code: %d", res.StatusCode)
-	}
-
-	var response trackGetFileUrl.Response
-
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return nil, errors.Wrap(err, "failed to decode response")
-	}
-
-	return &response, nil
+	return (Querier[trackGetFileUrl.Response]{c}).Req("track/getFileUrl", &url.Values{
+		"request_ts":  []string{timestamp},
+		"request_sig": []string{hashedSig},
+		"track_id":    []string{trackID},
+		"format_id":   []string{strconv.Itoa(int(format))},
+		"intent":      []string{"stream"},
+	})
 }
 
 func (c *Client) TrackGet(trackID string) (*trackGet.Response, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseAPI+"track/get", nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create request")
-	}
-
-	q := req.URL.Query()
-	q.Set("track_id", trackID)
-
-	req.URL.RawQuery = q.Encode()
-
-	res, err := c.do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to do request")
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("invalid status code: %d", res.StatusCode)
-	}
-
-	var response trackGet.Response
-
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return nil, errors.Wrap(err, "failed to decode response")
-	}
-
-	return &response, nil
+	return (Querier[trackGet.Response]{c}).Req("track/get", &url.Values{
+		"track_id": []string{trackID},
+	})
 }
 
-func (c *Client) FavoriteGetUserFavorites(t listType, offset int) (*favoriteGetUserFavorites.Response, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseAPI+"favorite/getUserFavorites", nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create request")
-	}
-
+func (c *Client) FavoriteGetUserFavorites(listType listType, offset int) (*favoriteGetUserFavorites.Response, error) {
 	timestamp := fmt.Sprintf("%d", time.Now().Unix())
 	sig := "favoritegetUserFavorites" + timestamp
-	hash := md5.Sum([]byte(sig)) //nolint:gosec
+	hash := md5.Sum([]byte(sig)) //nolint:gosec // MD5 is used for request signatures, not security
 	hashedSig := hex.EncodeToString(hash[:])
 
-	q := req.URL.Query()
-	q.Set("limit", "100")
-	q.Set("offset", strconv.Itoa(offset))
-	q.Set("type", string(t)) // albums, tracks, artists, articles
-	q.Set("request_ts", timestamp)
-	q.Set("request_sig", hashedSig)
-
-	req.URL.RawQuery = q.Encode()
-
-	res, err := c.do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to do request")
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		buf, err := io.ReadAll(res.Body)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to read body")
-		}
-
-		fmt.Fprintf(os.Stderr, "req: %v\n", req.URL.String())
-		fmt.Fprintf(os.Stderr, "err: %v\n", string(buf))
-
-		return nil, errors.Errorf("invalid status code: %d", res.StatusCode)
-	}
-
-	var response favoriteGetUserFavorites.Response
-
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return nil, errors.Wrap(err, "failed to decode response")
-	}
-
-	return &response, nil
+	return (Querier[favoriteGetUserFavorites.Response]{c}).Req("favorite/getUserFavorites", &url.Values{
+		"limit":       []string{"100"},
+		"offset":      []string{strconv.Itoa(offset)},
+		"type":        []string{string(listType)}, // albums, tracks, artists, article
+		"request_ts":  []string{timestamp},
+		"request_sig": []string{hashedSig},
+	})
 }
 
 func (c *Client) AlbumGet(albumID string) (*albumGet.Response, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseAPI+"album/get", nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create request")
-	}
-
-	q := req.URL.Query()
-	q.Set("album_id", albumID)
-
-	req.URL.RawQuery = q.Encode()
-
-	res, err := c.do(req)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to do request")
-	}
-
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, errors.Errorf("invalid status code: %d", res.StatusCode)
-	}
-
-	var response albumGet.Response
-
-	if err := json.NewDecoder(res.Body).Decode(&response); err != nil {
-		return nil, errors.Wrap(err, "failed to decode response")
-	}
-
-	return &response, nil
+	return (Querier[albumGet.Response]{c}).Req("album/get", &url.Values{
+		"album_id": []string{albumID},
+	})
 }

@@ -7,11 +7,6 @@ output:
 
 linters:
   disable:
-    - cyclop
-    - dupl # (duplicate code)
-    - funlen # (func length)
-    - varnamelen
-
     # deprecated with replacement
     - nosnakecase # (revive)
     - maligned # (fieldalignment)
