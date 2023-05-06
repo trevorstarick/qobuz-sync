@@ -108,16 +108,28 @@ func (album *Album) DownloadAlbumArt(dir string) error {
 		return errors.Wrap(err, "failed to get album art")
 	}
 
-	defer res.Body.Close()
+	defer func() {
+		if closeErr := res.Body.Close(); closeErr != nil {
+			err = errors.Wrap(err, "failed to close m3u file")
+		}
+	}()
 
-	ff, err := os.OpenFile(filepath.Join(dir, "album.jpg"), os.O_CREATE|os.O_WRONLY, common.FilePerm)
+	albumArt, err := os.OpenFile(filepath.Join(dir, "album.jpg"), os.O_CREATE|os.O_WRONLY, common.FilePerm)
 	if err != nil {
 		return errors.Wrap(err, "failed to create file")
 	}
 
-	defer ff.Close()
+	defer func() {
+		if syncErr := albumArt.Sync(); syncErr != nil {
+			err = errors.Wrap(err, "failed to sync file")
+		}
 
-	_, err = io.Copy(ff, res.Body)
+		if closeErr := albumArt.Close(); closeErr != nil {
+			err = errors.Wrap(err, "failed to close file")
+		}
+	}()
+
+	_, err = io.Copy(albumArt, res.Body)
 	if err != nil {
 		return errors.Wrap(err, "failed to copy response body")
 	}
