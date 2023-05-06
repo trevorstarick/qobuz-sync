@@ -9,9 +9,10 @@ import (
 
 //nolint:exhaustruct,gochecknoglobals
 var Search = &cobra.Command{
-	Use:   "search <query>",
-	Short: "Search for albums and tracks",
-	Args:  cobra.MinimumNArgs(1),
+	Use:    "search <query>",
+	Short:  "Search for albums and tracks",
+	Args:   cobra.MinimumNArgs(1),
+	Hidden: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client, err := GetClientFromContext(cmd.Context())
 		if err != nil {

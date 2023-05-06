@@ -12,10 +12,10 @@ import (
 
 //nolint:gochecknoglobals,exhaustruct
 var Debug = &cobra.Command{
-	Use:    "debug",
+	Use:    "debug <album|track> <id>",
 	Short:  "Debug commands",
 	Hidden: true,
-	Args:   cobra.MinimumNArgs(1),
+	Args:   cobra.MinimumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client, err := GetClientFromContext(cmd.Context())
 		if err != nil {
