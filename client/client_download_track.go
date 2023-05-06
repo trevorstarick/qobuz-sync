@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"os"
@@ -13,14 +12,11 @@ import (
 	"github.com/trevorstarick/qobuz-sync/common"
 )
 
+//nolint:cyclop // TODO: refactor
 func (client *Client) download(trackID, path string) error {
 	url, err := client.TrackGetFileURL(trackID, QualityMAX)
 	if err != nil {
 		return errors.Wrap(err, "failed to get track file url")
-	}
-
-	if url.FormatID == 0 {
-		return common.ErrUnavailable
 	}
 
 	if url.MimeType != "audio/flac" {
@@ -131,5 +127,17 @@ func (client *Client) downloadTrack(trackID string) error {
 }
 
 func (client *Client) DownloadTrack(trackID string) error {
-	return client.downloadTrack(trackID)
+	err := client.downloadTrack(trackID)
+	if err != nil {
+		if errors.Is(err, common.ErrAlreadyExists) {
+			dir, _ := client.trackTracker.Get(trackID)
+			log.Info().Msgf("track already downloaded: %v", dir)
+
+			return nil
+		}
+
+		return errors.Wrap(err, "failed to download track")
+	}
+
+	return nil
 }

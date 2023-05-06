@@ -31,7 +31,7 @@ func (client *Client) FavoriteAlbums() error {
 		for i := range res.Albums.Items {
 			album := &res.Albums.Items[i]
 
-			err = client.DownloadAlbum(album.ID)
+			_, err = client.downloadAlbum(album.ID)
 			if err != nil {
 				if errors.Is(err, common.ErrAlreadyExists) {
 					dir, _ := client.albumTracker.Get(album.ID)
@@ -64,7 +64,7 @@ func (client *Client) FavoriteTracks() error {
 		}
 
 		for _, track := range res.Tracks.Items {
-			err = client.DownloadTrack(strconv.Itoa(track.ID))
+			err = client.downloadTrack(strconv.Itoa(track.ID))
 			if err != nil {
 				if errors.Is(err, common.ErrAlreadyExists) {
 					path, _ := client.trackTracker.Get(strconv.Itoa(track.ID))

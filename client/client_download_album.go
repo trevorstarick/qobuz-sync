@@ -41,7 +41,7 @@ func (client *Client) downloadAlbum(albumID string) (*responses.Album, error) {
 			continue
 		}
 
-		err = client.DownloadTrack(strconv.Itoa(track.ID))
+		err = client.downloadTrack(strconv.Itoa(track.ID))
 		if err != nil {
 			if errors.Is(err, common.ErrAlreadyExists) {
 				log.Info().Msgf("track already exists, skipping: %v", track.Path())

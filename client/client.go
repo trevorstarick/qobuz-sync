@@ -1,7 +1,6 @@
 package client
 
 import (
-	"context"
 	"encoding/base64"
 	"io"
 	"net/http"
@@ -11,6 +10,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog/log"
+	"github.com/trevorstarick/qobuz-sync/common"
 	userLogin "github.com/trevorstarick/qobuz-sync/responses/user/login"
 )
 
@@ -202,8 +203,15 @@ func (client *Client) testSecret(secret string) bool {
 	}()
 
 	_, err := client.TrackGetFileURL("5966783", QualityMP3)
+	if err != nil && !errors.Is(err, common.ErrUnavailable) {
+		if !errors.Is(err, common.ErrBadRequest) {
+			log.Debug().Err(err).Msg("unexpected error when testing secrets")
+		}
 
-	return err == nil
+		return false
+	}
+
+	return true
 }
 
 //nolint:cyclop,funlen // todo: fix in future

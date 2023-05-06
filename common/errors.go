@@ -8,4 +8,6 @@ var (
 	ErrAuthFailed     = errors.New("authentication failed")
 	ErrInvalidArgs    = errors.New("invalid arguments")
 	ErrNotImplemented = errors.New("not implemented")
+	ErrNotFound       = errors.New("not found")
+	ErrBadRequest     = errors.New("bad request")
 )

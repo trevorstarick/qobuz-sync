@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/trevorstarick/qobuz-sync/common"
 	"github.com/trevorstarick/qobuz-sync/responses"
 	albumGet "github.com/trevorstarick/qobuz-sync/responses/album/get"
 	favoriteGetUserFavorites "github.com/trevorstarick/qobuz-sync/responses/favorite/getUserFavorites"
@@ -30,13 +31,22 @@ func (client *Client) TrackGetFileURL(trackID string, format trackFormat) (*trac
 	hash := md5.Sum([]byte(sig)) //nolint:gosec // MD5 is used for request signatures, not security
 	hashedSig := hex.EncodeToString(hash[:])
 
-	return (Querier[trackGetFileUrl.Response]{client}).Req("track/getFileUrl", &url.Values{
+	res, err := (Querier[trackGetFileUrl.Response]{client}).Req("track/getFileUrl", &url.Values{
 		"request_ts":  []string{timestamp},
 		"request_sig": []string{hashedSig},
 		"track_id":    []string{trackID},
 		"format_id":   []string{strconv.Itoa(int(format))},
 		"intent":      []string{"stream"},
 	})
+	if err != nil {
+		return nil, err
+	}
+
+	if res.FormatID == 0 {
+		return nil, common.ErrUnavailable
+	}
+
+	return res, nil
 }
 
 func (client *Client) TrackGet(trackID string) (*trackGet.Response, error) {

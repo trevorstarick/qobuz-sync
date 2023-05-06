@@ -45,7 +45,7 @@ func (client *Client) DownloadPlaylist(playlistID string) error {
 	_, _ = m3uFile.WriteString("#EXTID: " + playlistID + "\n")
 
 	for _, track := range res.Tracks.Items {
-		err = client.DownloadTrack(strconv.Itoa(track.ID))
+		err = client.downloadTrack(strconv.Itoa(track.ID))
 		if err != nil {
 			if errors.Is(err, common.ErrAlreadyExists) {
 				path, _ := client.trackTracker.Get(strconv.Itoa(track.ID))
