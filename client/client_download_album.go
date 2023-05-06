@@ -65,7 +65,10 @@ func (client *Client) DownloadAlbum(albumID string) error {
 	album, err := client.downloadAlbum(albumID)
 	if err != nil {
 		if errors.Is(err, common.ErrAlreadyExists) {
-			return err
+			dir, _ := client.albumTracker.Get(albumID)
+			log.Info().Msgf("album already downloaded: %v", dir)
+
+			return nil
 		}
 
 		return errors.Wrap(err, "failed to download album")
