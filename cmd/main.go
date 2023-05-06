@@ -58,7 +58,7 @@ var preRun = func(cmd *cobra.Command, args []string) error {
 var postRun = func(cmd *cobra.Command, args []string) error {
 	client, err := cmds.GetClientFromContext(cmd.Context())
 	if err != nil {
-		return errors.Wrap(err, "unable to get handler from context")
+		return errors.Wrap(err, "unable to get client from context")
 	}
 
 	err = client.Close()

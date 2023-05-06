@@ -13,12 +13,12 @@ var Search = &cobra.Command{
 	Short: "Search for albums and tracks",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		handler, err := GetClientFromContext(cmd.Context())
+		client, err := GetClientFromContext(cmd.Context())
 		if err != nil {
-			return errors.Wrap(err, "unable to get handler from context")
+			return errors.Wrap(err, "unable to get client from context")
 		}
 
-		err = handler.Search(strings.Join(args, " "))
+		err = client.Search(strings.Join(args, " "))
 		if err != nil {
 			return errors.Wrap(err, "unable to search")
 		}

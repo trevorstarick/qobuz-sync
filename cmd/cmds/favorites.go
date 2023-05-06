@@ -11,29 +11,29 @@ var Favorites = &cobra.Command{
 	Short: "Download all favorite albums and/or tracks",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		handler, err := GetClientFromContext(cmd.Context())
+		client, err := GetClientFromContext(cmd.Context())
 		if err != nil {
-			return errors.Wrap(err, "unable to get handler from context")
+			return errors.Wrap(err, "unable to get client from context")
 		}
 
 		switch args[0] {
 		case "albums":
-			err = handler.FavoriteAlbums()
+			err = client.FavoriteAlbums()
 			if err != nil {
 				return errors.Wrap(err, "unable to download favorite albums")
 			}
 		case "tracks":
-			err = handler.FavoriteTracks()
+			err = client.FavoriteTracks()
 			if err != nil {
 				return errors.Wrap(err, "unable to download favorite tracks")
 			}
 		case "albums+tracks", "tracks+albums":
-			err = handler.FavoriteTracks()
+			err = client.FavoriteTracks()
 			if err != nil {
 				return errors.Wrap(err, "unable to download favorite tracks")
 			}
 
-			err = handler.FavoriteAlbums()
+			err = client.FavoriteAlbums()
 			if err != nil {
 				return errors.Wrap(err, "unable to download favorite albums and tracks")
 			}

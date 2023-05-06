@@ -17,21 +17,21 @@ var Debug = &cobra.Command{
 	Hidden: true,
 	Args:   cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		handler, err := GetClientFromContext(cmd.Context())
+		client, err := GetClientFromContext(cmd.Context())
 		if err != nil {
-			return errors.Wrap(err, "unable to get handler from context")
+			return errors.Wrap(err, "unable to get client from context")
 		}
 
 		var res any
 
 		switch args[0] {
 		case "album":
-			res, err = handler.AlbumGet(args[1])
+			res, err = client.AlbumGet(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unable to get album")
 			}
 		case "track":
-			res, err = handler.TrackGet(args[1])
+			res, err = client.TrackGet(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unable to get track")
 			}

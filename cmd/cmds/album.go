@@ -11,13 +11,13 @@ var Album = &cobra.Command{
 	Short: "Download an album",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		handler, err := GetClientFromContext(cmd.Context())
+		client, err := GetClientFromContext(cmd.Context())
 		if err != nil {
-			return errors.Wrap(err, "unable to get handler from context")
+			return errors.Wrap(err, "unable to get client from context")
 		}
 
 		for _, id := range args {
-			err = handler.DownloadAlbum(id)
+			err = client.DownloadAlbum(id)
 			if err != nil {
 				return errors.Wrap(err, "unable to download album")
 			}
