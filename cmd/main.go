@@ -27,6 +27,24 @@ var preRun = func(cmd *cobra.Command, args []string) error {
 	username := os.Getenv("QOBUZ_USERNAME")
 	password := os.Getenv("QOBUZ_PASSWORD")
 
+	_username, err := cmd.Flags().GetString("username")
+	if err != nil {
+		return errors.Wrap(err, "unable to get username flag")
+	}
+
+	if _username != "" {
+		username = _username
+	}
+
+	_password, err := cmd.Flags().GetString("password")
+	if err != nil {
+		return errors.Wrap(err, "unable to get password flag")
+	}
+
+	if _password != "" {
+		password = _password
+	}
+
 	if username == "" || password == "" {
 		log.Error().Msg("QOBUZ_USERNAME and QOBUZ_PASSWORD envvars must be set")
 
@@ -38,12 +56,26 @@ var preRun = func(cmd *cobra.Command, args []string) error {
 		baseDir = os.Getenv("QOBUZ_BASEDIR")
 	}
 
-	err := os.MkdirAll(baseDir, os.ModePerm)
+	_baseDir, err := cmd.Flags().GetString("base-dir")
+	if err != nil {
+		return errors.Wrap(err, "unable to get base-dir flag")
+	}
+
+	if _baseDir != "" {
+		baseDir = _baseDir
+	}
+
+	err = os.MkdirAll(baseDir, os.ModePerm)
 	if err != nil {
 		return errors.Wrap(err, "unable to create base dir")
 	}
 
-	c, err := client.NewClient(username, password, baseDir)
+	force, err := cmd.Flags().GetBool("force")
+	if err != nil {
+		return errors.Wrap(err, "unable to get force flag")
+	}
+
+	c, err := client.NewClient(username, password, baseDir, force)
 	if err != nil {
 		return errors.Wrap(err, "unable to create client")
 	}
@@ -110,6 +142,12 @@ func main() {
 		PersistentPreRunE:  preRun,
 		PersistentPostRunE: postRun,
 	}
+
+	cmd.PersistentFlags().String("base-dir", DefaultBaseDir, "base directory to store downloads")
+	cmd.PersistentFlags().Bool("debug", false, "enable debug logging")
+	cmd.PersistentFlags().String("username", "", "Qobuz username")
+	cmd.PersistentFlags().String("password", "", "Qobuz password")
+	cmd.PersistentFlags().Bool("force", false, "force download even if file exists")
 
 	cmds.Debug.PersistentFlags().String("output", "spew", "output format (json, spew)")
 	cmd.AddCommand(cmds.Debug)

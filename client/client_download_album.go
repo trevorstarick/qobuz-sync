@@ -11,10 +11,38 @@ import (
 	"github.com/trevorstarick/qobuz-sync/responses"
 )
 
-func (client *Client) downloadAlbum(albumID string) (*responses.Album, error) {
-	_, err := client.albumTracker.Get(albumID)
+func (client *Client) downloadAlbumTrack(track *responses.Track, album *responses.Album) error {
+	if track.Album == nil {
+		track.Album = album
+	}
+
+	_, err := os.Stat(track.Path())
 	if err == nil {
-		return nil, errors.Wrap(common.ErrAlreadyExists, "cached")
+		log.Info().Msgf("track already exists, skipping: %v", track.Path())
+
+		return nil
+	}
+
+	err = client.downloadTrack(strconv.Itoa(track.ID))
+	if err != nil {
+		if errors.Is(err, common.ErrAlreadyExists) {
+			log.Info().Msgf("track already exists, skipping: %v", track.Path())
+
+			return nil
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (client *Client) downloadAlbum(albumID string) (*responses.Album, error) {
+	if !client.force {
+		_, err := client.albumTracker.Get(albumID)
+		if err == nil {
+			return nil, errors.Wrap(common.ErrAlreadyExists, "cached")
+		}
 	}
 
 	album, err := client.AlbumGet(albumID)
@@ -29,25 +57,11 @@ func (client *Client) downloadAlbum(albumID string) (*responses.Album, error) {
 		return nil, errors.Wrap(err, "failed to create directory")
 	}
 
-	for _, track := range album.Tracks.Items {
-		if track.Album == nil {
-			track.Album = album.Album
-		}
-
-		_, err = os.Stat(track.Path())
-		if err == nil {
-			log.Info().Msgf("track already exists, skipping: %v", track.Path())
-
-			continue
-		}
-
-		err = client.downloadTrack(strconv.Itoa(track.ID))
+	for i := range album.Tracks.Items {
+		err = client.downloadAlbumTrack(&album.Tracks.Items[i], album.Album)
 		if err != nil {
-			if errors.Is(err, common.ErrAlreadyExists) {
-				log.Info().Msgf("track already exists, skipping: %v", track.Path())
-			} else {
-				log.Warn().Msgf("failed to download track, skipping: %v", err)
-			}
+			path := album.Tracks.Items[i].Path()
+			log.Error().Err(err).Msgf("failed to download track, skipping: %v", path)
 
 			continue
 		}

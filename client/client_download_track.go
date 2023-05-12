@@ -84,9 +84,11 @@ func (client *Client) downloadFileAndSetMetadata(trackID, path string, metadata 
 }
 
 func (client *Client) downloadTrack(trackID string) error {
-	_, err := client.trackTracker.Get(trackID)
-	if err == nil {
-		return errors.Wrap(common.ErrAlreadyExists, "cached")
+	if !client.force {
+		_, err := client.trackTracker.Get(trackID)
+		if err == nil {
+			return errors.Wrap(common.ErrAlreadyExists, "cached")
+		}
 	}
 
 	track, err := client.TrackGet(trackID)
@@ -101,14 +103,16 @@ func (client *Client) downloadTrack(trackID string) error {
 		return errors.Wrap(err, "failed to create directory")
 	}
 
-	_, err = os.Stat(trackPath)
-	if err == nil {
-		err = client.trackTracker.Set(trackID, trackPath)
-		if err != nil {
-			return errors.Wrap(err, "failed to set track as downloaded")
-		}
+	if !client.force {
+		_, err = os.Stat(trackPath)
+		if err == nil {
+			err = client.trackTracker.Set(trackID, trackPath)
+			if err != nil {
+				return errors.Wrap(err, "failed to set track as downloaded")
+			}
 
-		return common.ErrAlreadyExists
+			return common.ErrAlreadyExists
+		}
 	}
 
 	err = client.downloadFileAndSetMetadata(trackID, trackPath, track.Metadata())

@@ -59,12 +59,14 @@ type Client struct {
 
 	bundle string
 
+	force bool
+
 	AppID   string
 	Secrets []string
 	Header  http.Header
 }
 
-func NewClient(email, password, baseDir string) (*Client, error) {
+func NewClient(email, password, baseDir string, force bool) (*Client, error) {
 	headers := http.Header{}
 	headers.Set("User-Agent", userAgent)
 
@@ -74,6 +76,7 @@ func NewClient(email, password, baseDir string) (*Client, error) {
 		baseDir:      baseDir,
 		trackTracker: &Tracker{}, //nolint:exhaustruct
 		albumTracker: &Tracker{}, //nolint:exhaustruct
+		force:        force,
 		AppID:        "",
 		Header:       headers,
 		Secrets:      []string{},
