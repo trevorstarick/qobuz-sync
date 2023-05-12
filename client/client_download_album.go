@@ -69,6 +69,10 @@ func (client *Client) DownloadAlbum(albumID string) error {
 			log.Info().Msgf("album already downloaded: %v", dir)
 
 			return nil
+		} else if errors.Is(err, common.ErrNotFound) {
+			log.Warn().Msgf("album not found: %v", albumID)
+
+			return nil
 		}
 
 		return errors.Wrap(err, "failed to download album")
