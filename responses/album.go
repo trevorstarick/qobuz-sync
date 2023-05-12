@@ -80,7 +80,13 @@ func (album *Album) Path() string {
 	artist := helpers.SanitizeStringToPath(album.Artist.Name)
 	albumName := helpers.SanitizeStringToPath(album.Title)
 
-	return filepath.Join(artist, albumName)
+	albumPath := filepath.Join(artist, albumName)
+
+	if album.Version != "" {
+		albumPath += " (" + album.Version + ")"
+	}
+
+	return albumPath
 }
 
 func (album *Album) DownloadAlbumArt(dir string) error {
