@@ -9,7 +9,7 @@ WORKDIR /app
 COPY  . .
 RUN go mod download
 RUN GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o qobuz-sync ./cmd && chmod o+x qobuz-sync
-RUN upx --brute -qq /app/qobuz-sync
+RUN upx -9 -qq /app/qobuz-sync
 
 # --- RUNTIME ---
 FROM scratch
