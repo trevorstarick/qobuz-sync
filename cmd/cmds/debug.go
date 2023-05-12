@@ -15,7 +15,7 @@ var Debug = &cobra.Command{
 	Use:    "debug <album|track> <id>",
 	Short:  "Debug commands",
 	Hidden: true,
-	Args:   cobra.MinimumNArgs(2),
+	Args:   cobra.MinimumNArgs(2), //nolint:gomnd
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client, err := GetClientFromContext(cmd.Context())
 		if err != nil {
