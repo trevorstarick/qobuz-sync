@@ -40,6 +40,8 @@ var Debug = &cobra.Command{
 		}
 
 		switch cmd.Flag("output").Value.String() {
+		case "spew":
+			spew.Dump(res)
 		case "json":
 			bytes, err := json.Marshal(res)
 			if err != nil {
@@ -47,8 +49,13 @@ var Debug = &cobra.Command{
 			}
 
 			fmt.Fprintf(os.Stdout, "%s\n", bytes)
-		default:
-			spew.Dump(res)
+		default: // case "json-pretty":
+			bytes, err := json.MarshalIndent(res, "", "  ")
+			if err != nil {
+				return errors.Wrap(err, "unable to marshal response")
+			}
+
+			fmt.Fprintf(os.Stdout, "%s\n", bytes)
 		}
 
 		return nil
