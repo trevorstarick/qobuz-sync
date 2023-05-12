@@ -83,6 +83,10 @@ func (tracker *Tracker) Set(key, value string) error {
 
 func (tracker *Tracker) Get(key string) (string, error) {
 	if v, ok := tracker.cache[key]; ok {
+		if _, err := os.Stat(v); err != nil {
+			return "", errors.Wrap(err, "unable to stat file")
+		}
+
 		return v, nil
 	}
 
