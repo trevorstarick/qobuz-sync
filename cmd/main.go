@@ -143,7 +143,7 @@ func main() {
 		PersistentPostRunE: postRun,
 	}
 
-	cmd.PersistentFlags().String("base-dir", DefaultBaseDir, "base directory to store downloads")
+	cmd.PersistentFlags().String("base-dir", "", "base directory to store downloads")
 	cmd.PersistentFlags().Bool("debug", false, "enable debug logging")
 	cmd.PersistentFlags().String("username", "", "Qobuz username")
 	cmd.PersistentFlags().String("password", "", "Qobuz password")
