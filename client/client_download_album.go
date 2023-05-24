@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
@@ -67,9 +68,13 @@ func (client *Client) downloadAlbum(albumID string) (*responses.Album, error) {
 		}
 	}
 
-	err = client.albumTracker.Set(albumID, albumDir)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to set album as downloaded")
+	if album.ReleasedAt < int(time.Now().Unix()) {
+		err = client.albumTracker.Set(albumID, albumDir)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to set album as downloaded")
+		}
+	} else {
+		log.Info().Msgf("album not released yet, not setting as downloaded: %v", album.Path())
 	}
 
 	return album.Album, nil
