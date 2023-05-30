@@ -3,13 +3,11 @@ FROM golang:1.20-alpine AS builder
 RUN apk update && \
 	apk add --no-cache \
 	"git" \
-    "ca-certificates" \
-	"upx"
+    "ca-certificates"
 WORKDIR /app
 COPY  . .
 RUN go mod download
-RUN GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o qobuz-sync ./cmd && chmod o+x qobuz-sync
-RUN upx -9 -qq /app/qobuz-sync
+RUN GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -trimpath -o qobuz-sync ./cmd && chmod o+x qobuz-sync
 
 # --- RUNTIME ---
 FROM scratch
