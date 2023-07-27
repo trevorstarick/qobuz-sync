@@ -9,14 +9,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/trevorstarick/qobuz-sync/common"
+	"github.com/trevorstarick/qobuz-sync/responses/catalog/search"
 )
-
-func (*Client) Search(_ string) error {
-	return common.ErrNotImplemented
-}
 
 func (*Client) GetArtist(_ string) error {
 	return common.ErrNotImplemented
+}
+
+func (client *Client) Search(query string) (*catalogsearch.CatalogSearch, error) {
+	return client.CatalogSearch(query)
 }
 
 func (client *Client) FavoriteAlbums() error {

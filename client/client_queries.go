@@ -11,6 +11,7 @@ import (
 	"github.com/trevorstarick/qobuz-sync/common"
 	"github.com/trevorstarick/qobuz-sync/responses"
 	albumGet "github.com/trevorstarick/qobuz-sync/responses/album/get"
+	catalogSearch "github.com/trevorstarick/qobuz-sync/responses/catalog/search"
 	favoriteGetUserFavorites "github.com/trevorstarick/qobuz-sync/responses/favorite/getUserFavorites"
 	playlistGet "github.com/trevorstarick/qobuz-sync/responses/playlist/get"
 	trackGet "github.com/trevorstarick/qobuz-sync/responses/track/get"
@@ -107,4 +108,10 @@ func (client *Client) PlaylistGet(playlistID string) (*playlistGet.Response, err
 	res.Tracks.Items = tracks
 
 	return res, nil
+}
+
+func (client *Client) CatalogSearch(query string) (*catalogSearch.CatalogSearch, error) {
+	return (Querier[catalogSearch.CatalogSearch]{client}).Req("catalog/search", &url.Values{
+		"query": []string{query},
+	})
 }

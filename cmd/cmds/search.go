@@ -3,6 +3,7 @@ package cmds
 import (
 	"strings"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -19,11 +20,12 @@ var Search = &cobra.Command{
 			return errors.Wrap(err, "unable to get client from context")
 		}
 
-		err = client.Search(strings.Join(args, " "))
+		res, err := client.Search(strings.Join(args, " "))
 		if err != nil {
 			return errors.Wrap(err, "unable to search")
 		}
 
+		spew.Dump(res)
 		return nil
 	},
 }
