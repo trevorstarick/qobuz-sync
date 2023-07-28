@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
@@ -34,6 +35,11 @@ var Debug = &cobra.Command{
 			res, err = client.TrackGet(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unable to get track")
+			}
+		case "search":
+			res, err = client.Search(strings.Join(args[1:], " "))
+			if err != nil {
+				return errors.Wrap(err, "unable to search")
 			}
 		default:
 			return errors.Errorf("unknown command %q", args[0])
