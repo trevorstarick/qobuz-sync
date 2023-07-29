@@ -37,7 +37,18 @@ var Search = &cobra.Command{
 			fmt.Println()
 			fmt.Println("==== Albums ====================")
 			for _, v := range res.Albums.Items {
-				fmt.Println(v.ID, v.Title, "/", v.Artist.Name)
+                                bits := v.MaximumBitDepth
+                                sr := v.MaximumSamplingRate
+                                ch := v.MaximumChannelCount
+                                details := ""
+
+                                if ch == 1 {
+                                    details = fmt.Sprintf("(mono/%v bits/%v kHz)", bits, sr)
+                                } else if bits != 16 || sr != 44.1 {
+                                    details = fmt.Sprintf("(%v bits/%v kHz)", bits, sr)
+                                }
+
+				fmt.Println(v.ID, v.Title, "/", v.Artist.Name, details)
 			}
 		}
 
