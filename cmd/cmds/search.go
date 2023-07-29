@@ -8,6 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func shorten(s string) string {
+	if len(s) > 60 {
+		return s[:60] + "..."
+	}
+
+	return s
+}
+
 //nolint:exhaustruct,gochecknoglobals
 var Search = &cobra.Command{
 	Use:   "search <query>",
@@ -30,7 +38,6 @@ var Search = &cobra.Command{
 			fmt.Println("==== Albums ====================")
 			for _, v := range res.Albums.Items {
 				fmt.Println(v.ID, v.Title, "/", v.Artist.Name)
-				fmt.Println()
 			}
 		}
 
@@ -46,7 +53,7 @@ var Search = &cobra.Command{
 			fmt.Println()
 			fmt.Println("==== Playlists ====================")
 			for _, v := range res.Playlists.Items {
-				fmt.Println(v.ID, v.Name)
+				fmt.Println(v.ID, v.Name, "/", v.TracksCount, "/", shorten(v.Description))
 			}
 		}
 
