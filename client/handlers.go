@@ -43,6 +43,19 @@ func (client *Client) FavoriteAlbums() error {
 
 				continue
 			}
+
+			albumDir := filepath.Join(client.baseDir, album.Path())
+
+			err = album.DownloadAlbumArt(albumDir)
+			if err != nil {
+				if errors.Is(err, common.ErrAlreadyExists) {
+					log.Info().Msgf("album art already exists: %v/album.jpg", albumDir)
+				} else {
+					log.Warn().Msgf("unable to download album art, skipping: %v", err)
+				}
+
+				continue
+			}
 		}
 
 		if res.Albums.Offset+res.Albums.Limit >= res.Albums.Total {
