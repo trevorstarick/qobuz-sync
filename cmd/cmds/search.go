@@ -72,7 +72,11 @@ var Search = &cobra.Command{
 			fmt.Println()
 			fmt.Println("==== Tracks ====================")
 			for _, v := range res.Tracks.Items {
-				fmt.Println(v.ID, v.Title, "/", v.Album.Title, "/", v.Performer.Name)
+                                performer := v.Performers
+                                if v.Performer != nil {
+                                    performer = v.Performer.Name
+                                }
+				fmt.Println(v.ID, v.Title, "/", v.Album.Title, "/", performer)
 			}
 		}
 
