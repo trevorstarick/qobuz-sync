@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-        qlient "github.com/trevorstarick/qobuz-sync/client"
+	qlient "github.com/trevorstarick/qobuz-sync/client"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
@@ -34,12 +34,32 @@ var Debug = &cobra.Command{
 				return errors.Wrap(err, "unable to get album")
 			}
 		case "track":
-			res, err = client.TrackGet(args[1])
-			if err != nil {
-				return errors.Wrap(err, "unable to get track")
+			if len(args) > 2 {
+				var format qlient.TrackFormat
+
+				switch strings.ToUpper(args[2]) {
+				case "MP3":
+					format = qlient.QualityMP3
+				case "FLAC":
+					format = qlient.QualityFLAC
+				case "HIRES":
+					format = qlient.QualityHIRES
+				case "MAX":
+					format = qlient.QualityMAX
+				}
+
+				res, err = client.TrackGetFileURL(args[1], format)
+				if err != nil {
+					return errors.Wrap(err, "unable to get track url")
+				}
+			} else {
+				res, err = client.TrackGet(args[1])
+				if err != nil {
+					return errors.Wrap(err, "unable to get track")
+				}
 			}
-                case "favorites":
-                        res, err = client.FavoriteGetUserFavorites(qlient.ListType(args[1]), 0)
+		case "favorites":
+			res, err = client.FavoriteGetUserFavorites(qlient.ListType(args[1]), 0)
 			if err != nil {
 				return errors.Wrap(err, "unable to get favorite")
 			}

@@ -15,13 +15,13 @@ import (
 	userLogin "github.com/trevorstarick/qobuz-sync/responses/user/login"
 )
 
-type trackFormat int
+type TrackFormat int
 
 const (
-	QualityMP3   trackFormat = 5  // 320kbps
-	QualityFLAC  trackFormat = 6  // 16-bit 44.1kHz+
-	QualityHIRES trackFormat = 7  // 24-bit 44.1kHz+
-	QualityMAX   trackFormat = 27 // 24-bit 96kHz+
+	QualityMP3   TrackFormat = 5  // 320kbps
+	QualityFLAC  TrackFormat = 6  // 16-bit 44.1kHz+
+	QualityHIRES TrackFormat = 7  // 24-bit 44.1kHz+
+	QualityMAX   TrackFormat = 27 // 24-bit 96kHz+
 
 )
 

@@ -25,7 +25,7 @@ func (client *Client) TrackSearch(query string) (*trackSearch.TrackSearch, error
 	})
 }
 
-func (client *Client) TrackGetFileURL(trackID string, format trackFormat) (*trackGetFileUrl.Response, error) {
+func (client *Client) TrackGetFileURL(trackID string, format TrackFormat) (*trackGetFileUrl.Response, error) {
 	timestamp := fmt.Sprintf("%d", time.Now().Unix())
 	sig := "trackgetFileUrlformat_id%vintentstreamtrack_id%v%v%v"
 	sig = fmt.Sprintf(sig, format, trackID, timestamp, client.Secrets[0])
