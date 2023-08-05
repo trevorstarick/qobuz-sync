@@ -6,6 +6,8 @@ import (
 	"os"
 	"strings"
 
+        qlient "github.com/trevorstarick/qobuz-sync/client"
+
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -35,6 +37,11 @@ var Debug = &cobra.Command{
 			res, err = client.TrackGet(args[1])
 			if err != nil {
 				return errors.Wrap(err, "unable to get track")
+			}
+                case "favorites":
+                        res, err = client.FavoriteGetUserFavorites(qlient.ListType(args[1]), 0)
+			if err != nil {
+				return errors.Wrap(err, "unable to get favorite")
 			}
 		case "search":
 			res, err = client.Search(strings.Join(args[1:], " "))

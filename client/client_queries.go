@@ -56,7 +56,7 @@ func (client *Client) TrackGet(trackID string) (*trackGet.Response, error) {
 	})
 }
 
-func (client *Client) FavoriteGetUserFavorites(listType listType, offset int) (*favoriteGetUserFavorites.Response, error) { //nolint:lll // long function name
+func (client *Client) FavoriteGetUserFavorites(listType ListType, offset int) (*favoriteGetUserFavorites.Response, error) { //nolint:lll // long function name
 	timestamp := fmt.Sprintf("%d", time.Now().Unix())
 	sig := "favoritegetUserFavorites" + timestamp
 	hash := md5.Sum([]byte(sig)) //nolint:gosec // MD5 is used for request signatures, not security

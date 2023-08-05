@@ -25,12 +25,12 @@ const (
 
 )
 
-type listType string
+type ListType string
 
 const (
-	ListTypeALBUM  listType = "albums"
-	ListTypeTRACK  listType = "tracks"
-	listTypeARTIST listType = "artists"
+	ListTypeALBUM  ListType = "albums"
+	ListTypeTRACK  ListType = "tracks"
+	listTypeARTIST ListType = "artists"
 )
 
 const (
