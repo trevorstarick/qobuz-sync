@@ -79,7 +79,7 @@ type Album struct {
 func (album *Album) Path() string {
 	artist := helpers.SanitizeStringToPath(album.Artist.Name)
 	albumName := helpers.SanitizeStringToPath(album.Title)
-        albumVersion := helpers.SanitizeStringToPath(album.Version)
+	albumVersion := helpers.SanitizeStringToPath(album.Version)
 
 	albumPath := filepath.Join(artist, albumName)
 
