@@ -15,7 +15,7 @@ import (
 
 //nolint:gochecknoglobals,exhaustruct
 var Debug = &cobra.Command{
-	Use:    "debug <album|track> <id>",
+	Use:    "debug <album|tracki|favorites|search> <id|type|search-query>",
 	Short:  "Debug commands",
 	Hidden: true,
 	Args:   cobra.MinimumNArgs(2), //nolint:gomnd
@@ -59,6 +59,27 @@ var Debug = &cobra.Command{
 				}
 			}
 		case "favorites":
+			if args[1] == "albums-tracks" {
+				fres, err := client.FavoriteGetUserFavorites(qlient.ListTypeALBUM, 0)
+				if err != nil {
+					return errors.Wrap(err, "unable to get favorite")
+				}
+
+				var alist []any
+
+				for _, album := range fres.Albums.Items {
+					ares, err := client.AlbumGet(album.ID)
+					if err != nil {
+						return errors.Wrap(err, "unable to get album")
+					}
+
+					alist = append(alist, ares)
+				}
+
+				res = alist
+				break
+			}
+
 			res, err = client.FavoriteGetUserFavorites(qlient.ListType(args[1]), 0)
 			if err != nil {
 				return errors.Wrap(err, "unable to get favorite")
