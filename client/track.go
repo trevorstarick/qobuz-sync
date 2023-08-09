@@ -55,7 +55,7 @@ func NewTracker(path string) (*Tracker, error) {
 
 		_, err := os.Stat(path)
 		if err != nil {
-			log.Warn().Msgf("unable to stat file: %v", path)
+			log.Warn().Msgf("unable to stat file: %v (%v)", path, err)
 
 			continue
 		}

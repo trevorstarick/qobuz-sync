@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
+
+	qlient "github.com/trevorstarick/qobuz-sync/client"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
@@ -12,7 +15,7 @@ import (
 
 //nolint:gochecknoglobals,exhaustruct
 var Debug = &cobra.Command{
-	Use:    "debug <album|track> <id>",
+	Use:    "debug <album|tracki|favorites|search> <id|type|search-query>",
 	Short:  "Debug commands",
 	Hidden: true,
 	Args:   cobra.MinimumNArgs(2), //nolint:gomnd
@@ -31,9 +34,60 @@ var Debug = &cobra.Command{
 				return errors.Wrap(err, "unable to get album")
 			}
 		case "track":
-			res, err = client.TrackGet(args[1])
+			if len(args) > 2 {
+				var format qlient.TrackFormat
+
+				switch strings.ToUpper(args[2]) {
+				case "MP3":
+					format = qlient.QualityMP3
+				case "FLAC":
+					format = qlient.QualityFLAC
+				case "HIRES":
+					format = qlient.QualityHIRES
+				case "MAX":
+					format = qlient.QualityMAX
+				}
+
+				res, err = client.TrackGetFileURL(args[1], format)
+				if err != nil {
+					return errors.Wrap(err, "unable to get track url")
+				}
+			} else {
+				res, err = client.TrackGet(args[1])
+				if err != nil {
+					return errors.Wrap(err, "unable to get track")
+				}
+			}
+		case "favorites":
+			if args[1] == "albums-tracks" {
+				fres, err := client.FavoriteGetUserFavorites(qlient.ListTypeALBUM, 0)
+				if err != nil {
+					return errors.Wrap(err, "unable to get favorite")
+				}
+
+				var alist []any
+
+				for _, album := range fres.Albums.Items {
+					ares, err := client.AlbumGet(album.ID)
+					if err != nil {
+						return errors.Wrap(err, "unable to get album")
+					}
+
+					alist = append(alist, ares)
+				}
+
+				res = alist
+				break
+			}
+
+			res, err = client.FavoriteGetUserFavorites(qlient.ListType(args[1]), 0)
 			if err != nil {
-				return errors.Wrap(err, "unable to get track")
+				return errors.Wrap(err, "unable to get favorite")
+			}
+		case "search":
+			res, err = client.Search(strings.Join(args[1:], " "))
+			if err != nil {
+				return errors.Wrap(err, "unable to search")
 			}
 		default:
 			return errors.Errorf("unknown command %q", args[0])

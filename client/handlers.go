@@ -9,14 +9,15 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/trevorstarick/qobuz-sync/common"
+	"github.com/trevorstarick/qobuz-sync/responses/catalog/search"
 )
-
-func (*Client) Search(_ string) error {
-	return common.ErrNotImplemented
-}
 
 func (*Client) GetArtist(_ string) error {
 	return common.ErrNotImplemented
+}
+
+func (client *Client) Search(query string) (*catalogsearch.CatalogSearch, error) {
+	return client.CatalogSearch(query)
 }
 
 func (client *Client) FavoriteAlbums() error {
@@ -38,6 +39,19 @@ func (client *Client) FavoriteAlbums() error {
 					log.Info().Msgf("album already exists: %v", dir)
 				} else {
 					log.Warn().Msgf("unable to download album, skipping: %v", err)
+				}
+
+				continue
+			}
+
+			albumDir := filepath.Join(client.baseDir, album.Path())
+
+			err = album.DownloadAlbumArt(albumDir)
+			if err != nil {
+				if errors.Is(err, common.ErrAlreadyExists) {
+					log.Info().Msgf("album art already exists: %v/album.jpg", albumDir)
+				} else {
+					log.Warn().Msgf("unable to download album art, skipping: %v", err)
 				}
 
 				continue
