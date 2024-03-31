@@ -83,6 +83,7 @@ func (client *Client) downloadFileAndSetMetadata(trackID, path string, metadata 
 	return nil
 }
 
+//nolint:cyclop // TODO: refactor
 func (client *Client) downloadTrack(trackID string) error {
 	if !client.force {
 		_, err := client.trackTracker.Get(trackID)
@@ -94,6 +95,10 @@ func (client *Client) downloadTrack(trackID string) error {
 	track, err := client.TrackGet(trackID)
 	if err != nil {
 		return errors.Wrap(err, "failed to get track")
+	}
+
+	if !track.Downloadable {
+		return errors.New("track is not downloadable")
 	}
 
 	trackPath := filepath.Join(client.baseDir, track.Path())

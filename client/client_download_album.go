@@ -16,6 +16,12 @@ func (client *Client) downloadAlbumTrack(track *responses.Track, album *response
 		track.Album = album
 	}
 
+	if !track.Downloadable {
+		log.Info().Msgf("track not downloadable, skipping: %v", track.Path())
+
+		return nil
+	}
+
 	_, err := os.Stat(track.Path())
 	if err == nil {
 		log.Info().Msgf("track already exists, skipping: %v", track.Path())
