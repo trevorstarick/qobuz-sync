@@ -26,7 +26,7 @@ func (client *Client) TrackSearch(query string) (*trackSearch.TrackSearch, error
 }
 
 func (client *Client) TrackGetFileURL(trackID string, format TrackFormat) (*trackGetFileUrl.Response, error) {
-	timestamp := fmt.Sprintf("%d", time.Now().Unix())
+	timestamp := strconv.Itoa(int(time.Now().Unix()))
 	sig := "trackgetFileUrlformat_id%vintentstreamtrack_id%v%v%v"
 	sig = fmt.Sprintf(sig, format, trackID, timestamp, client.Secrets[0])
 	hash := md5.Sum([]byte(sig)) //nolint:gosec // MD5 is used for request signatures, not security
@@ -57,7 +57,7 @@ func (client *Client) TrackGet(trackID string) (*trackGet.Response, error) {
 }
 
 func (client *Client) FavoriteGetUserFavorites(listType ListType, offset int) (*favoriteGetUserFavorites.Response, error) { //nolint:lll // long function name
-	timestamp := fmt.Sprintf("%d", time.Now().Unix())
+	timestamp := strconv.Itoa(int(time.Now().Unix()))
 	sig := "favoritegetUserFavorites" + timestamp
 	hash := md5.Sum([]byte(sig)) //nolint:gosec // MD5 is used for request signatures, not security
 	hashedSig := hex.EncodeToString(hash[:])

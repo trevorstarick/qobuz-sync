@@ -18,4 +18,8 @@ linters:
     
     # generics
     - structcheck
+    
+    # others
+    - depguard # really don't need this
+    - tagliatelle # annoying when dealing with third-party API
   enable-all: true

@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 	"github.com/trevorstarick/qobuz-sync/common"
-	"github.com/trevorstarick/qobuz-sync/responses/catalog/search"
+	catalogsearch "github.com/trevorstarick/qobuz-sync/responses/catalog/search"
 )
 
 func (*Client) GetArtist(_ string) error {

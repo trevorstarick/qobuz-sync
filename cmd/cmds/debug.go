@@ -6,11 +6,10 @@ import (
 	"os"
 	"strings"
 
-	qlient "github.com/trevorstarick/qobuz-sync/client"
-
 	"github.com/davecgh/go-spew/spew"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	qlient "github.com/trevorstarick/qobuz-sync/client"
 )
 
 //nolint:gochecknoglobals,exhaustruct
@@ -34,6 +33,7 @@ var Debug = &cobra.Command{
 				return errors.Wrap(err, "unable to get album")
 			}
 		case "track":
+			//nolint:gomnd
 			if len(args) > 2 {
 				var format qlient.TrackFormat
 
@@ -77,6 +77,7 @@ var Debug = &cobra.Command{
 				}
 
 				res = alist
+
 				break
 			}
 

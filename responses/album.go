@@ -13,7 +13,6 @@ import (
 	"github.com/trevorstarick/qobuz-sync/helpers"
 )
 
-//nolint:tagliatelle
 type Album struct {
 	Image                          Image     `json:"image"`
 	MaximumBitDepth                int       `json:"maximum_bit_depth"`

@@ -11,7 +11,6 @@ import (
 	"github.com/trevorstarick/qobuz-sync/helpers"
 )
 
-//nolint:tagliatelle
 type Track struct {
 	MaximumBitDepth int    `json:"maximum_bit_depth"`
 	Copyright       string `json:"copyright"`
@@ -60,7 +59,7 @@ func (t Track) Filename() string {
 	discNumber := ""
 
 	if t.Album.MediaCount > 1 {
-		discNumber = fmt.Sprintf("%d", t.MediaNumber)
+		discNumber = strconv.Itoa(t.MediaNumber)
 	}
 
 	format := ".flac"

@@ -1,6 +1,5 @@
 package responses
 
-//nolint:tagliatelle
 type Artist struct {
 	Image       any      `json:"image"`
 	Name        string   `json:"name"`

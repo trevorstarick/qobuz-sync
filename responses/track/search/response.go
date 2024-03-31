@@ -1,4 +1,3 @@
-//nolint:tagliatelle
 package tracksearch
 
 import "github.com/trevorstarick/qobuz-sync/responses"

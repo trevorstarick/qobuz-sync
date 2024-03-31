@@ -1,4 +1,4 @@
-//nolint:tagliatelle,misspell
+//nolint:misspell
 package userlogin
 
 type Response struct {
@@ -16,6 +16,8 @@ type Subscription struct {
 type ColorScheme struct {
 	Logo string `json:"logo"`
 }
+
+//nolint:revive
 type Parameters struct {
 	LossyStreaming          bool        `json:"lossy_streaming"`
 	LosslessStreaming       bool        `json:"lossless_streaming"`

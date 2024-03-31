@@ -23,7 +23,7 @@ var (
 )
 
 //nolint:gochecknoglobals
-var preRun = func(cmd *cobra.Command, args []string) error {
+var preRun = func(cmd *cobra.Command, _ []string) error {
 	username := os.Getenv("QOBUZ_USERNAME")
 	password := os.Getenv("QOBUZ_PASSWORD")
 
@@ -87,7 +87,7 @@ var preRun = func(cmd *cobra.Command, args []string) error {
 }
 
 //nolint:gochecknoglobals
-var postRun = func(cmd *cobra.Command, args []string) error {
+var postRun = func(cmd *cobra.Command, _ []string) error {
 	client, err := cmds.GetClientFromContext(cmd.Context())
 	if err != nil {
 		return errors.Wrap(err, "unable to get client from context")

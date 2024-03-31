@@ -1,4 +1,3 @@
-//nolint:tagliatelle
 package playlistget
 
 import "github.com/trevorstarick/qobuz-sync/responses"

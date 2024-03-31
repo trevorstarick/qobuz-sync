@@ -1,4 +1,3 @@
-//nolint:tagliatelle
 package trackgetfileurl
 
 type Response struct {

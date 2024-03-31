@@ -8,20 +8,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func shorten(s string) string {
-	if len(s) > 60 {
-		return s[:60] + "..."
+func shorten(str string) string {
+	//nolint:gomnd
+	if len(str) > 60 {
+		return str[:60] + "..."
 	}
 
-	return s
+	return str
 }
 
-//nolint:exhaustruct,gochecknoglobals
+//nolint:exhaustruct,gochecknoglobals,forbidigo
 var Search = &cobra.Command{
 	Use:   "search <query>",
 	Short: "Search for albums and tracks",
 	Args:  cobra.MinimumNArgs(1),
-	//Hidden: true,
+	// Hidden: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		client, err := GetClientFromContext(cmd.Context())
 		if err != nil {
@@ -36,19 +37,19 @@ var Search = &cobra.Command{
 		if len(res.Albums.Items) > 0 {
 			fmt.Println()
 			fmt.Println("==== Albums ====================")
-			for _, v := range res.Albums.Items {
-				bits := v.MaximumBitDepth
-				sr := v.MaximumSamplingRate
-				ch := v.MaximumChannelCount
+			for _, item := range res.Albums.Items {
+				bits := item.MaximumBitDepth
+				sampleRate := item.MaximumSamplingRate
+				channels := item.MaximumChannelCount
 				details := ""
 
-				if ch == 1 {
-					details = fmt.Sprintf("(mono/%v bits/%v kHz)", bits, sr)
-				} else if bits != 16 || sr != 44.1 {
-					details = fmt.Sprintf("(%v bits/%v kHz)", bits, sr)
+				if channels == 1 {
+					details = fmt.Sprintf("(mono/%v bits/%v kHz)", bits, sampleRate)
+				} else if bits != 16 || sampleRate != 44.1 {
+					details = fmt.Sprintf("(%v bits/%v kHz)", bits, sampleRate)
 				}
 
-				fmt.Println(v.ID, v.Title, "/", v.Artist.Name, details)
+				fmt.Println(item.ID, item.Title, "/", item.Artist.Name, details)
 			}
 		}
 

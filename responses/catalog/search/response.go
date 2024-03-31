@@ -1,9 +1,11 @@
 package catalogsearch
 
-import "github.com/trevorstarick/qobuz-sync/responses"
-import "github.com/trevorstarick/qobuz-sync/responses/playlist/get"
+import (
+	"github.com/trevorstarick/qobuz-sync/responses"
+	playlistget "github.com/trevorstarick/qobuz-sync/responses/playlist/get"
+)
 
-// CatalogSearch is the response to a catalog/search request
+// CatalogSearch is the response to a catalog/search request.
 type CatalogSearch struct {
 	Query string `json:"query"`
 
