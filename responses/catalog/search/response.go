@@ -48,4 +48,17 @@ type CatalogSearch struct {
 		Total int               `json:"total"`
 		Items []responses.Track `json:"items"`
 	} `json:"tracks"`
+
+	MostPopular struct {
+		Limit     int `json:"limit"`
+		Offset    int `json:"offset"`
+		Analytics struct {
+			SearchExternalID string `json:"search_external_id"`
+		} `json:"analytics"`
+		Total int `json:"total"`
+		Items []struct {
+			Type    string `json:"type"`
+			Content any    `json:"content"`
+		} `json:"items"`
+	} `json:"most_popular"`
 }
