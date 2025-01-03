@@ -97,8 +97,8 @@ func (client *Client) downloadTrack(trackID string) error {
 		return errors.Wrap(err, "failed to get track")
 	}
 
-	if !track.Downloadable {
-		return errors.New("track is not downloadable")
+	if !track.Downloadable && !track.Streamable {
+		return errors.New("track is not downloadable/streamable")
 	}
 
 	trackPath := filepath.Join(client.baseDir, track.Path())
