@@ -72,7 +72,10 @@ func (t Track) Path() string {
 		spew.Dump(t)
 	}
 
-	return filepath.Join(t.Album.Path(), t.Filename())
+	path := filepath.Join(t.Album.Path(), t.Filename())
+	path = filepath.Clean(path)
+
+	return path
 }
 
 func (t Track) Metadata() common.Metadata {
