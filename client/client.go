@@ -59,14 +59,15 @@ type Client struct {
 
 	bundle string
 
-	force bool
+	force  bool
+	doStat bool
 
 	AppID   string
 	Secrets []string
 	Header  http.Header
 }
 
-func NewClient(email, password, baseDir string, force bool) (*Client, error) {
+func NewClient(email, password, baseDir string, force, doStat bool) (*Client, error) {
 	headers := http.Header{}
 	headers.Set("User-Agent", userAgent)
 
@@ -77,6 +78,7 @@ func NewClient(email, password, baseDir string, force bool) (*Client, error) {
 		trackTracker: &Tracker{}, //nolint:exhaustruct
 		albumTracker: &Tracker{}, //nolint:exhaustruct
 		force:        force,
+		doStat:       doStat,
 		AppID:        "",
 		Header:       headers,
 		Secrets:      []string{},
@@ -108,12 +110,12 @@ func NewClient(email, password, baseDir string, force bool) (*Client, error) {
 
 	client.Secrets = secrets
 
-	client.trackTracker, err = NewTracker(filepath.Join(baseDir, "tracks.txt"))
+	client.trackTracker, err = NewTracker(filepath.Join(baseDir, "tracks.txt"), client.doStat)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create track tracker")
 	}
 
-	client.albumTracker, err = NewTracker(filepath.Join(baseDir, "albums.txt"))
+	client.albumTracker, err = NewTracker(filepath.Join(baseDir, "albums.txt"), client.doStat)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to create album tracker")
 	}

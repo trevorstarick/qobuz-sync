@@ -11,13 +11,14 @@ import (
 )
 
 type Tracker struct {
-	cache map[string]string
-	file  *os.File
+	cache  map[string]string
+	file   *os.File
+	doStat bool
 
 	Path string `json:"path"`
 }
 
-func NewTracker(path string) (*Tracker, error) {
+func NewTracker(path string, doStat bool) (*Tracker, error) {
 	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_RDWR, common.FilePerm)
 	if err != nil {
 		return nil, errors.Wrap(err, "unable to open file")
@@ -26,9 +27,10 @@ func NewTracker(path string) (*Tracker, error) {
 	// defer file.Close() // handled by Tracker.Close()
 
 	tracker := &Tracker{
-		cache: make(map[string]string),
-		file:  file,
-		Path:  path,
+		cache:  make(map[string]string),
+		file:   file,
+		doStat: doStat,
+		Path:   path,
 	}
 
 	bytes, err := os.ReadFile(path)
@@ -53,11 +55,13 @@ func NewTracker(path string) (*Tracker, error) {
 		trackOrAlbumID := line[:index]
 		path := line[index+len(delim):]
 
-		_, err := os.Stat(path)
-		if err != nil {
-			log.Warn().Msgf("unable to stat file: %v (%v)", path, err)
+		if doStat {
+			_, err := os.Stat(path)
+			if err != nil {
+				log.Warn().Msgf("unable to stat file: %v (%v)", path, err)
 
-			continue
+				continue
+			}
 		}
 
 		tracker.cache[trackOrAlbumID] = path
@@ -83,8 +87,10 @@ func (tracker *Tracker) Set(key, value string) error {
 
 func (tracker *Tracker) Get(key string) (string, error) {
 	if v, ok := tracker.cache[key]; ok {
-		if _, err := os.Stat(v); err != nil {
-			return "", errors.Wrap(err, "unable to stat file")
+		if tracker.doStat {
+			if _, err := os.Stat(v); err != nil {
+				return "", errors.Wrap(err, "unable to stat file")
+			}
 		}
 
 		return v, nil

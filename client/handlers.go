@@ -2,6 +2,7 @@ package client
 
 import (
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -92,15 +93,17 @@ func (client *Client) FavoriteTracks() error {
 
 			albumDir := filepath.Join(client.baseDir, track.Album.Path())
 
-			err = track.Album.DownloadAlbumArt(albumDir)
-			if err != nil {
-				if errors.Is(err, common.ErrAlreadyExists) {
-					log.Info().Msgf("album art already exists: %v/album.jpg", albumDir)
-				} else {
-					log.Warn().Msgf("unable to download album art, skipping: %v", err)
-				}
+			if _, err := os.Stat(albumDir); err == nil {
+				err = track.Album.DownloadAlbumArt(albumDir)
+				if err != nil {
+					if errors.Is(err, common.ErrAlreadyExists) {
+						log.Info().Msgf("album art already exists: %v/album.jpg", albumDir)
+					} else {
+						log.Warn().Msgf("unable to download album art, skipping: %v", err)
+					}
 
-				continue
+					continue
+				}
 			}
 		}
 

@@ -75,7 +75,12 @@ var preRun = func(cmd *cobra.Command, _ []string) error {
 		return errors.Wrap(err, "unable to get force flag")
 	}
 
-	c, err := client.NewClient(username, password, baseDir, force)
+	doStat, err := cmd.Flags().GetBool("stat")
+	if err != nil {
+		return errors.Wrap(err, "unable to get stat flag")
+	}
+
+	c, err := client.NewClient(username, password, baseDir, force, doStat)
 	if err != nil {
 		return errors.Wrap(err, "unable to create client")
 	}
@@ -148,6 +153,7 @@ func main() {
 	cmd.PersistentFlags().String("username", "", "Qobuz username")
 	cmd.PersistentFlags().String("password", "", "Qobuz password")
 	cmd.PersistentFlags().Bool("force", false, "force download even if file exists")
+	cmd.PersistentFlags().Bool("stat", false, "stat files before downloading")
 
 	cmds.Debug.PersistentFlags().String("output", "spew", "output format (json, spew)")
 	cmd.AddCommand(cmds.Debug)
