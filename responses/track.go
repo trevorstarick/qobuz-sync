@@ -79,17 +79,14 @@ func (t Track) Path() string {
 }
 
 func (t Track) Metadata() common.Metadata {
-	composer := ""
-	if t.Composer != nil {
-		composer = t.Composer.Name
+	if t.Album == nil {
+		return common.Metadata{}
 	}
 
-	return common.Metadata{
+	metadata := common.Metadata{
 		Album:       t.Album.Title,
 		AlbumArtist: t.Album.Artist.Name,
-		Artist:      t.Performer.Name,
 		Comment:     fmt.Sprintf("qobuz_id: %v", t.ID),
-		Composer:    composer,
 		Genre:       t.Album.Genre.Name,
 		Date:        time.Unix(int64(t.Album.ReleasedAt), 0),
 		Disc:        t.MediaNumber,
@@ -98,4 +95,20 @@ func (t Track) Metadata() common.Metadata {
 		TrackTotal:  t.Album.TracksCount,
 		Title:       t.Title,
 	}
+
+	if t.Composer != nil {
+		metadata.Composer = t.Composer.Name
+	} else {
+		metadata.Composer = ""
+	}
+
+	if t.Performer != nil {
+		metadata.Artist = t.Performer.Name
+	} else if t.Performers != "" {
+		metadata.Artist = t.Performers
+	} else if t.Album.Artist != nil {
+		metadata.Artist = t.Album.Artist.Name
+	}
+
+	return metadata
 }
