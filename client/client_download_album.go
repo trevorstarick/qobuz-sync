@@ -16,7 +16,7 @@ func (client *Client) downloadAlbumTrack(track *responses.Track, album *response
 		track.Album = album
 	}
 
-	if !track.Downloadable {
+	if !track.Downloadable && !track.Streamable {
 		log.Info().Msgf("track not downloadable, skipping: %v", track.Path())
 
 		return nil
@@ -73,7 +73,7 @@ func (client *Client) downloadAlbum(albumID string) (*responses.Album, error) {
 		}
 	}
 
-	if album.Downloadable {
+	if album.Downloadable || album.Streamable {
 		err = client.albumTracker.Set(albumID, albumDir)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to set album as downloaded")
