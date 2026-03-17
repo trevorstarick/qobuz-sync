@@ -128,7 +128,7 @@ func (client *Client) Link(link string) error {
 	}
 
 	switch u.Host {
-	case "open.qobuz.com":
+	case "open.qobuz.com", "play.qobuz.com":
 		parts := strings.Split(u.Path, "/")
 
 		if len(parts) < 3 { //nolint:gomnd
