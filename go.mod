@@ -1,6 +1,6 @@
 module github.com/trevorstarick/qobuz-sync
 
-go 1.22
+go 1.26
 
 require (
 	github.com/davecgh/go-spew v1.1.1

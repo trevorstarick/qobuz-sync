@@ -1,8 +1,8 @@
-FROM golang:1.22-alpine AS builder
+FROM golang:1.26-alpine AS builder
 # --- GO BASE ---
 RUN apk update && \
-	apk add --no-cache \
-	"git" \
+    apk add --no-cache \
+    "git" \
     "ca-certificates"
 WORKDIR /app
 
