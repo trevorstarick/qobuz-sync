@@ -95,8 +95,12 @@ func NewClient(email, password, baseDir string, force, doStat bool) (*Client, er
 
 	client.AppID = appID
 
-	if err := client.Login(email, password); err != nil {
-		return nil, errors.Wrap(err, "auth")
+	if os.Getenv("AUTH_TOKEN") != "" {
+		client.Header.Set(userAuthToken, os.Getenv("AUTH_TOKEN"))
+	} else {
+		if err := client.Login(email, password); err != nil {
+			return nil, errors.Wrap(err, "auth")
+		}
 	}
 
 	secrets, err := client.getSecrets()
